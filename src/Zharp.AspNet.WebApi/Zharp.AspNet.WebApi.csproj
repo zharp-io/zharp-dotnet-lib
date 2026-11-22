@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>net462</TargetFrameworks>
+    <RootNamespace>Zharp.AspNet.WebApi</RootNamespace>
+    <PackageId>Zharp.AspNet.WebApi</PackageId>
+    <Description>Zharp for ASP.NET Web API 2 on .NET Framework: config.AddZharp() reports what controllers throw — Web API handles it before Application_Error sees it — once, with the code that ran. Brings Zharp.AspNet.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNet.WebApi.Core" />
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" PrivateAssets="All" />
+    <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="All" />
+    <Reference Include="System.Web" />
+    <ProjectReference Include="..\Zharp.AspNet\Zharp.AspNet.csproj" />
+  </ItemGroup>
+</Project>

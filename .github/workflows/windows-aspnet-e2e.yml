@@ -3,7 +3,8 @@ name: Classic ASP.NET end to end (Windows)
 # Classic ASP.NET (System.Web, .NET Framework 4.8) can't run in Linux Docker. A real app
 # (e2e/windows/AspNetApp) runs in IIS Express against a stand-in OTLP endpoint, and what it sent
 # is checked: Zharp.AspNet installed itself, requests named by route, one error per failure with
-# the code that ran, secret headers filtered, a failed SqlClient query on LocalDB.
+# the code that ran, secret headers filtered, a failed SqlClient query on LocalDB, a Web API 2
+# controller failure (Zharp.AspNet.WebApi).
 on:
   workflow_dispatch:
   push:
@@ -69,7 +70,7 @@ jobs:
           $headers = @{ traceparent = "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01"; Authorization = "Bearer very-secret"; Cookie = "a=b" }
           Invoke-WebRequest http://localhost:8080/hello -Headers $headers -UseBasicParsing | Out-Null
           Invoke-WebRequest http://localhost:8080/users/5 -UseBasicParsing | Out-Null
-          foreach ($path in "/boom", "/db/fail") {
+          foreach ($path in "/boom", "/db/fail", "/api/orders/0") {
             try { Invoke-WebRequest "http://localhost:8080$path" -UseBasicParsing | Out-Null } catch { "$path -> $($_.Exception.Response.StatusCode)" }
           }
           Start-Sleep 8
@@ -90,11 +91,13 @@ jobs:
           Expect ($traces -match "zharp.deferred") "span exception events deferred"
           Expect (([regex]::Matches($logs, "Classic cart is empty")).Count -ge 1) "the request failure reported"
           Expect ($logs -match "zharp.mechanism" -and $logs -match "aspnet") "mechanism aspnet"
+          Expect (([regex]::Matches($logs, "Web API order 0 is reserved")).Count -ge 1 -and $logs -match "aspnet-webapi") "Web API 2 failure reported (config.AddZharp())"
+          Expect ($traces -match "api/orders/\{id") "Web API requests named by route"
           Expect ($logs -match "zharp.source_context" -and $logs -match "Global.cs") "the code that ran (embedded sources)"
           Expect ($logs -match "InvalidObjectName" -and $logs -match "no_such_table") "failed SqlClient query, named type and statement"
           # Once per failure: the message appears in one error record (its text is in the body and attributes).
           $records = ([regex]::Matches($logs, "exception.stacktrace")).Count
-          Expect ($records -eq 2) "one error per failure ($records error records)"
+          Expect ($records -eq 3) "one error per failure ($records error records)"
           if ($fail.Count) { throw "failed: $($fail -join '; ')" }
 
       - name: What was sent

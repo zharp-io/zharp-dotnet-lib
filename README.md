@@ -10,7 +10,8 @@ line in `Program.cs`, the app's key and `<EmbedAllSources>`. By hand, pick your 
 |---|---|
 | `Zharp.AspNetCore` | ASP.NET Core (.NET 8, 10, 11) |
 | `Zharp` | any .NET app: Generic Host workers, console apps, .NET/HTTP (logs and errors only); .NET 8+, .NET Framework 4.6.2+, .NET Standard 2.0 |
-| `Zharp.AspNet` | classic ASP.NET on .NET Framework (MVC 5, Web API 2, WebForms) |
+| `Zharp.AspNet` | classic ASP.NET on .NET Framework (MVC 5, WebForms) |
+| `Zharp.AspNet.WebApi` | ASP.NET Web API 2 on .NET Framework (with `Zharp.AspNet`) |
 | `Zharp.AwsLambda` | .NET on AWS Lambda |
 | `Zharp.GoogleCloudFunctions` | .NET on Google Cloud Run functions (Cloud Functions) |
 | `Zharp.Build` | uploads a source bundle for builds that don't embed their sources (optional) |
@@ -80,10 +81,23 @@ Install-Package Zharp.AspNet
 ```
 
 The package registers its HTTP modules itself (no `<modules>` edit). What reaches
-`Application_Error` is reported once. Web API 2 handles its own exceptions: register an
-`IExceptionLogger` that calls `ZharpSdk.CaptureException(context.Exception, handled: false)`.
-.NET Framework 4.7.2+ reads the portable PDBs that carry the sources; on 4.6.2–4.7.1 use
-`<DebugType>full</DebugType>`.
+`Application_Error` is reported once. .NET Framework 4.7.2+ reads the portable PDBs that carry the
+sources; on 4.6.2–4.7.1 use `<DebugType>full</DebugType>`.
+
+Web API 2 handles its controllers' exceptions itself, before `Application_Error`: use
+`Zharp.AspNet.WebApi` (it brings `Zharp.AspNet`) and one line in `WebApiConfig.Register`:
+
+```powershell
+Install-Package Zharp.AspNet.WebApi
+```
+
+```csharp
+public static void Register(HttpConfiguration config)
+{
+    config.AddZharp();
+    …
+}
+```
 
 ## AWS Lambda (.NET)
 
@@ -140,6 +154,19 @@ that can't embed sources reference `Zharp.Build`:
 With `ZHARP_APP_ID` and `ZHARP_AUTH_TOKEN` (a workspace API key with `artifacts:write`) set in CI,
 each Release build uploads the project's sources under its PDB ID, which errors carry as
 `zharp.build_id`. Without a token the step only prints what it would upload.
+
+## Troubleshooting
+
+**A Release stack ends in `lambda_method…` with no frame of my code.** In Release builds the JIT
+inlines small methods into their callers. A short controller action or minimal API handler can be
+inlined into the delegate ASP.NET Core compiles to call it (`lambda_method12(Closure, Object,
+Object[])`), so the stack has no frame of yours and no code to show. The error is still grouped
+and counted as usual. A Debug build shows the method, and a linked repository (or source bundle)
+still shows the code of any of your frames that remain. Nothing needs changing in your code.
+
+**No code shown with errors.** Check that the project sets `<EmbedAllSources>true</EmbedAllSources>`
+and ships its `.pdb` files (`dotnet publish` does by default). A build with
+`<DebugType>none</DebugType>` has no PDB to read: use `Zharp.Build` instead.
 
 ## Settings
 

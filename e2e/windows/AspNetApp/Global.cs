@@ -1,6 +1,7 @@
 using System;
 using System.Data.SqlClient;
 using System.Web;
+using System.Web.Http;
 using System.Web.Routing;
 
 namespace AspNetApp
@@ -9,10 +10,26 @@ namespace AspNetApp
     {
         protected void Application_Start()
         {
+            GlobalConfiguration.Configure(config =>
+            {
+                config.MapHttpAttributeRoutes();
+                config.AddZharp();
+            });
             RouteTable.Routes.Add("hello", new Route("hello", new Handler(ctx => ctx.Response.Write("hello"))));
             RouteTable.Routes.Add("users", new Route("users/{id}", new Handler(ctx => ctx.Response.Write("user " + ctx.Request.RequestContext.RouteData.Values["id"]))));
             RouteTable.Routes.Add("boom", new Route("boom", new Handler(_ => Checkout.Run(0))));
             RouteTable.Routes.Add("db", new Route("db/fail", new Handler(_ => Orders.Load())));
+        }
+    }
+
+    [RoutePrefix("api/orders")]
+    public class OrdersController : ApiController
+    {
+        [HttpGet, Route("{id:int}")]
+        public IHttpActionResult Get(int id)
+        {
+            if (id == 0) throw new InvalidOperationException("Web API order 0 is reserved");
+            return Ok(new { id });
         }
     }
 

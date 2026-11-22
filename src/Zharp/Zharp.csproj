@@ -27,6 +27,7 @@
     <InternalsVisibleTo Include="Zharp.Tests" />
     <InternalsVisibleTo Include="Zharp.AspNetCore" />
     <InternalsVisibleTo Include="Zharp.AspNet" />
+    <InternalsVisibleTo Include="Zharp.AspNet.WebApi" />
     <InternalsVisibleTo Include="Zharp.AwsLambda" />
     <InternalsVisibleTo Include="Zharp.GoogleCloudFunctions" />
   </ItemGroup>
