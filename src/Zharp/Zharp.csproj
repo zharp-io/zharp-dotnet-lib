@@ -30,5 +30,7 @@
     <InternalsVisibleTo Include="Zharp.AspNet.WebApi" />
     <InternalsVisibleTo Include="Zharp.AwsLambda" />
     <InternalsVisibleTo Include="Zharp.GoogleCloudFunctions" />
+    <InternalsVisibleTo Include="Zharp.Windows" />
+    <InternalsVisibleTo Include="Zharp.Maui" />
   </ItemGroup>
 </Project>

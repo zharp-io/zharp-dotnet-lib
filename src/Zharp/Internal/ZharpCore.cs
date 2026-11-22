@@ -52,19 +52,27 @@ namespace Zharp.Internal
         public IReadOnlyList<IZharpIntegration> Integrations => integrations;
         bool disposed;
 
-        ZharpCore(Settings settings)
+        /// <summary>On apps (Zharp.Windows, Zharp.Maui): sessions, screens, crashes, hangs, the outbox.</summary>
+        public Apps.AppRuntime? App { get; }
+
+        ZharpCore(Settings settings, Apps.AppRuntime? app)
         {
             Settings = settings;
+            App = app;
             Errors = new ErrorTracker(this);
+            if (app != null)
+            {
+                app.Handler = new Apps.OutboxHandler(app.Outbox, () => Settings.Endpoint, () => Settings.Key, DebugLog);
+            }
         }
 
         /// <summary>Start Zharp once per process; later calls get the running one.</summary>
-        public static ZharpCore Start(Settings settings, IEnumerable<IZharpIntegration>? extra = null)
+        public static ZharpCore Start(Settings settings, IEnumerable<IZharpIntegration>? extra = null, Apps.AppRuntime? app = null)
         {
             lock (StartLock)
             {
                 if (Current != null && !Current.disposed) return Current;
-                var core = new ZharpCore(settings);
+                var core = new ZharpCore(settings, app);
                 core.Build(extra);
                 Current = core;
                 return core;
@@ -164,6 +172,7 @@ namespace Zharp.Internal
                 try { integration.Started(this); }
                 catch (Exception e) { DebugLog("integration start: " + e.Message); }
             }
+            App?.Started(this);
             DebugLog("started: " + Settings.DescribeTarget() + ", endpoint " + Settings.Endpoint + ", logs " + (Settings.Logs ? "on" : "off") + ", tracing " + (Settings.Tracing ? "on" : "off"));
         }
 
@@ -183,19 +192,37 @@ namespace Zharp.Internal
             }
         }
 
-        OtlpExporterOptions ExporterOptions(string path) => new OtlpExporterOptions
+        OtlpExporterOptions ExporterOptions(string path)
         {
-            Endpoint = new Uri(Settings.Endpoint + path),
-            Protocol = OtlpExportProtocol.HttpProtobuf,
-            Headers = "Authorization=Bearer " + Settings.Key,
-            TimeoutMilliseconds = 10000,
-        };
+            var options = new OtlpExporterOptions
+            {
+                Endpoint = new Uri(Settings.Endpoint + path),
+                Protocol = OtlpExportProtocol.HttpProtobuf,
+                Headers = "Authorization=Bearer " + Settings.Key,
+                TimeoutMilliseconds = 10000,
+            };
+            Apps.OutboxHandler? handler = App?.Handler;
+            if (handler != null)
+            {
+                // Apps: what can't be sent now waits on disk (and a crash is written there first).
+                options.HttpClientFactory = () => new System.Net.Http.HttpClient(handler, disposeHandler: false) { Timeout = TimeSpan.FromSeconds(30) };
+            }
+            return options;
+        }
 
         IEnumerable<KeyValuePair<string, object>> ResourceAttributes()
         {
             yield return new KeyValuePair<string, object>("telemetry.distro.name", "zharp");
             yield return new KeyValuePair<string, object>("telemetry.distro.version", ZharpSdk.Version);
             if (Settings.Environment != null) yield return new KeyValuePair<string, object>("deployment.environment.name", Settings.Environment);
+            if (App != null)
+            {
+                yield return new KeyValuePair<string, object>("device.id", App.DeviceId);
+                IEnumerable<KeyValuePair<string, object>> host;
+                try { host = new List<KeyValuePair<string, object>>(App.Host.ResourceAttributes()); }
+                catch { host = Array.Empty<KeyValuePair<string, object>>(); }
+                foreach (var kv in host) yield return kv;
+            }
         }
 
         // ── reports ─────────────────────────────────────────────────────
@@ -265,6 +292,20 @@ namespace Zharp.Internal
         {
             ExceptionInfo info = Stacks.Describe(error);
             List<StackFrame> frames = Stacks.FramesOf(error);
+            AppStack? appStack = null;
+            if (App != null)
+            {
+                // Apps ship without PDBs: line-less frames of the app's code go with what finds their lines.
+                try
+                {
+                    appStack = IlFrames.Describe(error);
+                    info.Stacktrace = appStack.Stacktrace;
+                }
+                catch (Exception e)
+                {
+                    DebugLog("app stack: " + e.Message);
+                }
+            }
             var attributes = new List<KeyValuePair<string, object?>>();
             if (extra != null) attributes.AddRange(extra);
             string type = info.Type;
@@ -285,16 +326,54 @@ namespace Zharp.Internal
             attributes.Add(new KeyValuePair<string, object?>("exception.stacktrace", info.Stacktrace));
             attributes.Add(new KeyValuePair<string, object?>("zharp.handled", handled ? "true" : "false"));
             attributes.Add(new KeyValuePair<string, object?>("zharp.mechanism", mechanism));
-            if (Settings.CaptureSourceContext)
+            if (appStack != null)
             {
-                string? context = SourceContext.Of(frames);
-                if (context != null) attributes.Add(new KeyValuePair<string, object?>(SourceContext.Attribute, context));
+                // Apps never carry their sources (they'd ship to every user): the code comes from the
+                // source bundle Zharp.Build uploaded under the module's MVID.
+                if (appStack.IlFrames != null) attributes.Add(new KeyValuePair<string, object?>(IlFrames.Attribute, appStack.IlFrames));
+                if (appStack.BuildId != null) attributes.Add(new KeyValuePair<string, object?>(SourceContext.BuildIdAttribute, appStack.BuildId));
             }
-            string? buildId = SourceContext.BuildIdOf(frames);
-            if (buildId != null) attributes.Add(new KeyValuePair<string, object?>(SourceContext.BuildIdAttribute, buildId));
+            else
+            {
+                if (Settings.CaptureSourceContext)
+                {
+                    string? context = SourceContext.Of(frames);
+                    if (context != null) attributes.Add(new KeyValuePair<string, object?>(SourceContext.Attribute, context));
+                }
+                string? buildId = SourceContext.BuildIdOf(frames);
+                if (buildId != null) attributes.Add(new KeyValuePair<string, object?>(SourceContext.BuildIdAttribute, buildId));
+            }
             attributes.AddRange(Users.AttributesFor(span));
+            if (App != null) attributes.AddRange(App.Attributes());
             Emit(level, attributes, span);
             Errors.NoteReported(span);
+        }
+
+        /// <summary>The UI thread froze (apps): an error without a stack, as the main thread's can't be read from another thread in .NET.</summary>
+        public void ReportAnr(string message)
+        {
+            try
+            {
+                if (disposed) return;
+                var attributes = new List<KeyValuePair<string, object?>>
+                {
+                    new KeyValuePair<string, object?>("exception.type", Apps.AppRuntime.AnrType),
+                    new KeyValuePair<string, object?>("exception.message", message),
+                    new KeyValuePair<string, object?>("exception.stacktrace", Apps.AppRuntime.AnrType + ": " + message),
+                    new KeyValuePair<string, object?>("zharp.handled", "false"),
+                    new KeyValuePair<string, object?>("zharp.mechanism", "hang"),
+                    new KeyValuePair<string, object?>("zharp.error.kind", "anr"),
+                    new KeyValuePair<string, object?>("thread.name", "main"),
+                };
+                attributes.AddRange(Users.AttributesFor(null));
+                if (App != null) attributes.AddRange(App.Attributes());
+                Emit(LogLevel.Error, attributes, null);
+                Flush(3000);
+            }
+            catch (Exception e)
+            {
+                DebugLog("hang report: " + e.Message);
+            }
         }
 
         static string? FindCode(Exception error)
@@ -335,6 +414,11 @@ namespace Zharp.Internal
         void OnUnhandled(object sender, UnhandledExceptionEventArgs e)
         {
             DebugLog("unhandled exception" + (e.IsTerminating ? " (terminating)" : ""));
+            if (App != null && e.ExceptionObject is Exception crash)
+            {
+                App.ReportCrash(crash, "uncaught", e.IsTerminating);
+                return;
+            }
             if (e.ExceptionObject is Exception error)
             {
                 Report(error, handled: false, mechanism: "uncaught", span: Activity.Current, level: e.IsTerminating ? LogLevel.Critical : LogLevel.Error);

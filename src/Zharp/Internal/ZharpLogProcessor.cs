@@ -95,13 +95,15 @@ namespace Zharp.Internal
         void AddUser(LogRecord record)
         {
             Activity? span = Activity.Current;
-            if (span == null) return;
+            if (span == null && core.App == null) return;
             List<KeyValuePair<string, object?>>? extra = null;
             foreach (var kv in core.Users.AttributesFor(span))
             {
                 if (!kv.Key.StartsWith("enduser.", StringComparison.Ordinal) && kv.Key != "session.id") continue;
                 (extra ??= new List<KeyValuePair<string, object?>>()).Add(kv);
             }
+            // Apps: every line is on the session and the screen it was written on.
+            if (core.App != null) (extra ??= new List<KeyValuePair<string, object?>>()).AddRange(core.App.Attributes());
             if (extra == null) return;
             var all = new List<KeyValuePair<string, object?>>(record.Attributes ?? Array.Empty<KeyValuePair<string, object?>>());
             all.AddRange(extra);

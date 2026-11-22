@@ -87,11 +87,17 @@ namespace Zharp.Internal
             MethodBase? method = frame.GetMethod();
             string? type = method?.DeclaringType?.FullName;
             if (type == null) return true;
+            return !IsLibraryType(type);
+        }
+
+        /// <summary>A type of the runtime, the platform or a well-known library: never the app's own code.</summary>
+        public static bool IsLibraryType(string type)
+        {
             foreach (string prefix in LibraryPrefixes)
             {
-                if (type.StartsWith(prefix, StringComparison.Ordinal)) return false;
+                if (type.StartsWith(prefix, StringComparison.Ordinal)) return true;
             }
-            return true;
+            return false;
         }
 
         /// <summary>Each exception's frames, innermost exception first, as the stack text lists them.</summary>

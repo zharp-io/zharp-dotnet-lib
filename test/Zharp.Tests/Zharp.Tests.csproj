@@ -16,8 +16,14 @@
     <PackageReference Include="xunit.runner.visualstudio" />
     <ProjectReference Include="..\..\src\Zharp\Zharp.csproj" />
     <ProjectReference Include="..\..\src\Zharp.Build\Zharp.Build.csproj" />
+    <ProjectReference Include="..\NoPdbSample\NoPdbSample.csproj" />
     <PackageReference Include="Microsoft.Build.Utilities.Core" />
   </ItemGroup>
+  <!-- The sample ships as apps do, without its PDB; the PDB is kept aside for the tests that read it. -->
+  <Target Name="ZharpTestsMoveSamplePdb" AfterTargets="Build">
+    <Copy SourceFiles="$(OutDir)NoPdbSample.pdb" DestinationFolder="$(OutDir)symbols" Condition="Exists('$(OutDir)NoPdbSample.pdb')" />
+    <Delete Files="$(OutDir)NoPdbSample.pdb" />
+  </Target>
   <ItemGroup Condition="'$(TargetFramework)' != 'net48'">
     <ProjectReference Include="..\..\src\Zharp.AspNetCore\Zharp.AspNetCore.csproj" />
   </ItemGroup>

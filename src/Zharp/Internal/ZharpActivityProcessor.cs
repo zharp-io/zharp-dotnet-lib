@@ -34,6 +34,14 @@ namespace Zharp.Internal
             {
                 MarkExceptionEvents(activity);
                 RedactUrls(activity);
+                if (core.App != null)
+                {
+                    // Apps: every span is on the session and the screen it happened on.
+                    foreach (var kv in core.App.Attributes())
+                    {
+                        if (activity.GetTagItem(kv.Key) == null) activity.SetTag(kv.Key, kv.Value);
+                    }
+                }
                 if (activity.Parent == null)
                 {
                     foreach (var kv in core.Users.AttributesFor(activity))

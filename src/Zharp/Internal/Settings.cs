@@ -131,13 +131,20 @@ namespace Zharp.Internal
         /// <summary>The service name when there's no entry assembly (IIS: the site's name).</summary>
         internal static string? FallbackService;
 
-        static string DefaultService() => Entry()?.GetName().Name ?? FallbackService ?? "dotnet-app";
+        /// <summary>The release when there's no entry assembly (MAUI on Android and iOS: the app's version).</summary>
+        internal static string? FallbackRelease;
+
+        /// <summary>Apps whose platform names them better than the entry assembly (MAUI: the bundle ID and "1.4.0 (212)").</summary>
+        internal static bool PreferFallback;
+
+        static string DefaultService() => (PreferFallback ? FallbackService : null) ?? Entry()?.GetName().Name ?? FallbackService ?? "dotnet-app";
 
         /// <summary>The entry assembly's informational version: .NET 8+ SDKs add the commit after a '+'.</summary>
         static string? DefaultRelease()
         {
+            if (PreferFallback && FallbackRelease != null) return FallbackRelease;
             Assembly? entry = Entry();
-            if (entry == null) return null;
+            if (entry == null) return FallbackRelease;
             try
             {
                 string? info = entry.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;

@@ -56,6 +56,27 @@ namespace Zharp
             }
         }
 
+        /// <summary>Start Zharp for an app (Zharp.Windows, Zharp.Maui): crashes, hangs, screens, sessions, the outbox.</summary>
+        internal static ZharpCore? StartApp(ZharpOptions options, Internal.Apps.AppHost host, ZharpAppOptions? appOptions = null, IConfiguration? configuration = null)
+        {
+            Settings.FallbackService = host.DefaultService ?? Settings.FallbackService;
+            Settings.FallbackRelease = host.DefaultRelease ?? Settings.FallbackRelease;
+            Settings.PreferFallback = host.DefaultsFirst;
+            Settings settings = Settings.Resolve(options, configuration);
+            if (settings.Disabled) return null;
+            try
+            {
+                var app = new Internal.Apps.AppRuntime(host);
+                app.Apply(appOptions);
+                return ZharpCore.Start(settings, null, app);
+            }
+            catch (Exception e)
+            {
+                ZharpCore.Announce("could not start: " + e.Message);
+                return null;
+            }
+        }
+
         /// <summary>Whether Zharp is running.</summary>
         public static bool IsEnabled => ZharpCore.Current != null;
 
@@ -77,7 +98,12 @@ namespace Zharp
             ZharpCore.Current?.Users.SetUser(id, email, name);
 
         /// <summary>Forget the user (sign-out).</summary>
-        public static void ClearUser() => ZharpCore.Current?.Users.SetUser(null, null, null);
+        public static void ClearUser()
+        {
+            ZharpCore.Current?.Users.SetUser(null, null, null);
+            // Apps: a new session for whoever signs in next.
+            ZharpCore.Current?.App?.Session.Rotate();
+        }
 
         /// <summary>A tag on every error and request from now on; null removes it.</summary>
         public static void SetTag(string key, string? value) => ZharpCore.Current?.Users.SetTag(key, value);
