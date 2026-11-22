@@ -1,0 +1,31 @@
+<Project>
+  <PropertyGroup>
+    <Version>0.1.0</Version>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <NoWarn>$(NoWarn);CS1591;NU5104</NoWarn>
+    <Deterministic>true</Deterministic>
+
+    <!-- NuGet metadata (dotnet pack). Publishing is done by hand. -->
+    <Authors>Zharp</Authors>
+    <Company>Zharp</Company>
+    <Copyright>Copyright (c) Zharp</Copyright>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://zharp.io</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/zharp-io/zharp-dotnet-lib</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageTags>zharp;apm;errors;tracing;opentelemetry;monitoring</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageIcon></PackageIcon>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+  <ItemGroup Condition="'$(IsPackable)' != 'false' AND $(MSBuildProjectDirectory.Contains('src'))">
+    <None Include="$(MSBuildThisFileDirectory)README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+</Project>

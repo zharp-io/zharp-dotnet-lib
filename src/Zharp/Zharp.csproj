@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>net10.0;net8.0;netstandard2.0;net462</TargetFrameworks>
+    <RootNamespace>Zharp</RootNamespace>
+    <PackageId>Zharp</PackageId>
+    <Description>Zharp for .NET: errors with the code that ran, traces, failed queries, request headers and (optionally) logs, sent to Zharp over OpenTelemetry. AddZharp() on any Generic Host, ZharpSdk.Init() anywhere else.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="OpenTelemetry" />
+    <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.Http" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.SqlClient" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" />
+    <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="All" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0' OR '$(TargetFramework)' == 'net462'">
+    <PackageReference Include="System.Reflection.Metadata" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(TargetFramework)' == 'net462'">
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" PrivateAssets="All" />
+    <Reference Include="System.IO.Compression" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Zharp.Tests" />
+    <InternalsVisibleTo Include="Zharp.AspNetCore" />
+    <InternalsVisibleTo Include="Zharp.AspNet" />
+    <InternalsVisibleTo Include="Zharp.AwsLambda" />
+    <InternalsVisibleTo Include="Zharp.GoogleCloudFunctions" />
+  </ItemGroup>
+</Project>
