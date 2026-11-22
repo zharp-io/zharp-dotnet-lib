@@ -9,6 +9,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Zharp", "src\Zharp\Zharp.cs
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Zharp.AspNetCore", "src\Zharp.AspNetCore\Zharp.AspNetCore.csproj", "{6AC84833-CDE7-413D-87C4-5812C5BCD138}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Zharp.AwsLambda", "src\Zharp.AwsLambda\Zharp.AwsLambda.csproj", "{B6BC32A7-9735-41FF-9267-6294EDD92F26}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Zharp.GoogleCloudFunctions", "src\Zharp.GoogleCloudFunctions\Zharp.GoogleCloudFunctions.csproj", "{F43ACC68-03D1-485D-9B93-FD70FC73274C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -43,6 +47,30 @@ Global
 		{6AC84833-CDE7-413D-87C4-5812C5BCD138}.Release|x64.Build.0 = Release|Any CPU
 		{6AC84833-CDE7-413D-87C4-5812C5BCD138}.Release|x86.ActiveCfg = Release|Any CPU
 		{6AC84833-CDE7-413D-87C4-5812C5BCD138}.Release|x86.Build.0 = Release|Any CPU
+		{B6BC32A7-9735-41FF-9267-6294EDD92F26}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B6BC32A7-9735-41FF-9267-6294EDD92F26}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B6BC32A7-9735-41FF-9267-6294EDD92F26}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{B6BC32A7-9735-41FF-9267-6294EDD92F26}.Debug|x64.Build.0 = Debug|Any CPU
+		{B6BC32A7-9735-41FF-9267-6294EDD92F26}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{B6BC32A7-9735-41FF-9267-6294EDD92F26}.Debug|x86.Build.0 = Debug|Any CPU
+		{B6BC32A7-9735-41FF-9267-6294EDD92F26}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B6BC32A7-9735-41FF-9267-6294EDD92F26}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B6BC32A7-9735-41FF-9267-6294EDD92F26}.Release|x64.ActiveCfg = Release|Any CPU
+		{B6BC32A7-9735-41FF-9267-6294EDD92F26}.Release|x64.Build.0 = Release|Any CPU
+		{B6BC32A7-9735-41FF-9267-6294EDD92F26}.Release|x86.ActiveCfg = Release|Any CPU
+		{B6BC32A7-9735-41FF-9267-6294EDD92F26}.Release|x86.Build.0 = Release|Any CPU
+		{F43ACC68-03D1-485D-9B93-FD70FC73274C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F43ACC68-03D1-485D-9B93-FD70FC73274C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F43ACC68-03D1-485D-9B93-FD70FC73274C}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{F43ACC68-03D1-485D-9B93-FD70FC73274C}.Debug|x64.Build.0 = Debug|Any CPU
+		{F43ACC68-03D1-485D-9B93-FD70FC73274C}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{F43ACC68-03D1-485D-9B93-FD70FC73274C}.Debug|x86.Build.0 = Debug|Any CPU
+		{F43ACC68-03D1-485D-9B93-FD70FC73274C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F43ACC68-03D1-485D-9B93-FD70FC73274C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F43ACC68-03D1-485D-9B93-FD70FC73274C}.Release|x64.ActiveCfg = Release|Any CPU
+		{F43ACC68-03D1-485D-9B93-FD70FC73274C}.Release|x64.Build.0 = Release|Any CPU
+		{F43ACC68-03D1-485D-9B93-FD70FC73274C}.Release|x86.ActiveCfg = Release|Any CPU
+		{F43ACC68-03D1-485D-9B93-FD70FC73274C}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -50,5 +78,7 @@ Global
 	GlobalSection(NestedProjects) = preSolution
 		{D7AA92BB-3775-474E-820A-49AE2630B614} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{6AC84833-CDE7-413D-87C4-5812C5BCD138} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
+		{B6BC32A7-9735-41FF-9267-6294EDD92F26} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
+		{F43ACC68-03D1-485D-9B93-FD70FC73274C} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 	EndGlobalSection
 EndGlobal

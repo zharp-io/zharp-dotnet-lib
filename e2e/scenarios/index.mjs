@@ -1,6 +1,7 @@
 // Every scenario, by name: node e2e/run.mjs <name…>
 import { web } from './web.mjs';
 import { consoleApp, httpLogs } from './console.mjs';
+import { lambda, gcf } from './serverless.mjs';
 
 export const SCENARIOS = [
   web({ tfm: 'net10.0', db: 'pg' }),
@@ -9,4 +10,6 @@ export const SCENARIOS = [
   web({ tfm: 'net11.0', db: 'pg' }),
   consoleApp,
   httpLogs,
+  lambda,
+  gcf,
 ];

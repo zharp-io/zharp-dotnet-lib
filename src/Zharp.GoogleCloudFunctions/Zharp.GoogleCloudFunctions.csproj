@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>net10.0</TargetFrameworks>
+    <RootNamespace>Zharp.GoogleCloudFunctions</RootNamespace>
+    <PackageId>Zharp.GoogleCloudFunctions</PackageId>
+    <Description>Zharp for .NET on Google Cloud Run functions (Cloud Functions): one assembly attribute traces each invocation, reports what the function throws once with the code that ran, and sends everything before the instance is throttled.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="Google.Cloud.Functions.Hosting" />
+    <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="All" />
+    <ProjectReference Include="..\Zharp.AspNetCore\Zharp.AspNetCore.csproj" />
+  </ItemGroup>
+</Project>

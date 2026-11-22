@@ -33,6 +33,7 @@ namespace Zharp.Internal
         {
             "Zharp.AspNetCore.AspNetCoreIntegration, Zharp.AspNetCore",
             "Zharp.AspNet.AspNetIntegration, Zharp.AspNet",
+            "Zharp.AwsLambda.LambdaIntegration, Zharp.AwsLambda",
         };
 
         static readonly object StartLock = new object();
@@ -44,6 +45,8 @@ namespace Zharp.Internal
         public ILoggerFactory LoggerFactory { get; private set; } = Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance;
 
         TracerProvider? tracer;
+        /// <summary>Zharp's tracer provider (the Lambda wrapper traces invocations with it).</summary>
+        public TracerProvider? Tracer => tracer;
         ILogger errorLogger = Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance;
         readonly List<IZharpIntegration> integrations = new List<IZharpIntegration>();
         public IReadOnlyList<IZharpIntegration> Integrations => integrations;
@@ -82,7 +85,13 @@ namespace Zharp.Internal
                     DebugLog("integration " + name + ": " + e.Message);
                 }
             }
-            if (extra != null) integrations.AddRange(extra);
+            if (extra != null)
+            {
+                foreach (IZharpIntegration integration in extra)
+                {
+                    if (!integrations.Exists(i => i.GetType() == integration.GetType())) integrations.Add(integration);
+                }
+            }
 
             if (!Settings.HasKey) Announce("ZHARP_KEY is not set: nothing will be sent. Set it in the environment or the \"Zharp\" section of appsettings.json.");
 
@@ -114,6 +123,12 @@ namespace Zharp.Internal
             if (Settings.HasKey && Settings.Tracing)
             {
                 tb.AddProcessor(new BatchActivityExportProcessor(new OtlpTraceExporter(ExporterOptions("/v1/traces")), scheduledDelayMilliseconds: 2000));
+            }
+            if (IsServerless)
+            {
+                // Lambda freezes the process, and Cloud Run throttles its CPU, once a request is
+                // answered: each request's spans and errors go out as its root span ends.
+                tb.AddProcessor(new RootFlushProcessor(this));
             }
             tracer = tb.Build();
 
@@ -149,6 +164,22 @@ namespace Zharp.Internal
                 catch (Exception e) { DebugLog("integration start: " + e.Message); }
             }
             DebugLog("started: " + Settings.DescribeTarget() + ", endpoint " + Settings.Endpoint + ", logs " + (Settings.Logs ? "on" : "off") + ", tracing " + (Settings.Tracing ? "on" : "off"));
+        }
+
+        public static bool IsServerless =>
+            !string.IsNullOrEmpty(System.Environment.GetEnvironmentVariable("AWS_LAMBDA_FUNCTION_NAME"))
+            || !string.IsNullOrEmpty(System.Environment.GetEnvironmentVariable("FUNCTION_TARGET"))
+            || !string.IsNullOrEmpty(System.Environment.GetEnvironmentVariable("K_SERVICE"));
+
+        /// <summary>Added after the exporting processor: when a root span ends it has been queued, so flushing sends it.</summary>
+        sealed class RootFlushProcessor : BaseProcessor<Activity>
+        {
+            readonly ZharpCore core;
+            public RootFlushProcessor(ZharpCore core) { this.core = core; }
+            public override void OnEnd(Activity data)
+            {
+                if (data.Parent == null) core.Flush(3000);
+            }
         }
 
         OtlpExporterOptions ExporterOptions(string path) => new OtlpExporterOptions

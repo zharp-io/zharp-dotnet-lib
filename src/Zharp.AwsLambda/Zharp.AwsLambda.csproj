@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>net10.0</TargetFrameworks>
+    <RootNamespace>Zharp.AwsLambda</RootNamespace>
+    <PackageId>Zharp.AwsLambda</PackageId>
+    <Description>Zharp for .NET on AWS Lambda: ZharpLambda.Wrap(handler) traces each invocation (cold starts marked), reports what it throws once with the code that ran, and sends everything before the function freezes.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="OpenTelemetry.Instrumentation.AWSLambda" />
+    <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="All" />
+    <ProjectReference Include="..\Zharp\Zharp.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Zharp.Tests" />
+  </ItemGroup>
+</Project>
