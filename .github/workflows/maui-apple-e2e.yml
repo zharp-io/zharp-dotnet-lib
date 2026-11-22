@@ -29,6 +29,11 @@ jobs:
         with:
           dotnet-version: 10.0.x
 
+      - name: Build with the .NET 10 SDK (MAUI 10), not a newer one on the runner
+        run: |
+          echo '{"sdk":{"version":"10.0.100","rollForward":"latestFeature"}}' > global.json
+          dotnet --version
+
       - name: MAUI for ${{ matrix.platform }}
         run: sudo dotnet workload install maui-${{ matrix.platform }}
 
@@ -47,7 +52,7 @@ jobs:
           python3 e2e/mock_zharp.py "$RUNNER_TEMP/build-${{ matrix.platform }}" > "$RUNNER_TEMP/build-mock.log" 2>&1 &
           sleep 2
           if [ "${{ matrix.platform }}" = ios ]; then RID=iossimulator-arm64; else RID=maccatalyst-arm64; fi
-          dotnet build e2e/maui/ShopApp -c Release -f net10.0-${{ matrix.platform }} -p:RuntimeIdentifier=$RID -v n | grep -E "Zharp|error|ILLink" | head -60
+          dotnet build e2e/maui/ShopApp -c Release -f net10.0-${{ matrix.platform }} -p:ShopTargets=net10.0-${{ matrix.platform }} -p:RuntimeIdentifier=$RID -v n | grep -E "Zharp|error|ILLink" | head -60
           ls -la "$RUNNER_TEMP/build-${{ matrix.platform }}/artifacts"
           ls "$RUNNER_TEMP/build-${{ matrix.platform }}/artifacts" | grep -q "portable-pdb-.*-ShopApp.pdb" || { echo "::error::no portable PDB uploaded"; exit 1; }
 

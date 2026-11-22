@@ -18,8 +18,8 @@
     <IsTrimmable>true</IsTrimmable>
   </PropertyGroup>
   <ItemGroup>
-    <!-- The MAUI version the installed workload brings. -->
-    <PackageReference Include="Microsoft.Maui.Controls" VersionOverride="$(MauiVersion)" />
+    <!-- The oldest MAUI 10 it works with (Directory.Packages.props): apps bring their own, newer one. -->
+    <PackageReference Include="Microsoft.Maui.Controls" />
     <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="All" />
     <ProjectReference Include="..\Zharp\Zharp.csproj" />
   </ItemGroup>

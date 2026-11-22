@@ -34,7 +34,7 @@
     <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.404" />
     <PackageVersion Include="Google.Cloud.Functions.Hosting" Version="3.0.1" />
     <PackageVersion Include="Microsoft.Build.Utilities.Core" Version="18.12.2" />
-    <!-- Zharp.Maui takes the version of the installed MAUI workload (VersionOverride="$(MauiVersion)"). -->
+    <!-- Zharp.Maui's floor: any MAUI 10 app. -->
     <PackageVersion Include="Microsoft.Maui.Controls" Version="10.0.0" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.0.0" />
     <PackageVersion Include="xunit" Version="2.9.3" />
