@@ -13,6 +13,8 @@ jobs:
   apple:
     runs-on: macos-26
     timeout-minutes: 75
+    # Mac Catalyst: the current MAUI 10 SDK (27.2) needs Xcode 27.2, which hosted runners do not have yet.
+    continue-on-error: ${{ matrix.platform == 'maccatalyst' }}
     strategy:
       fail-fast: false
       matrix:

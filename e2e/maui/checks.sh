@@ -15,7 +15,7 @@ start_mock() {
 }
 stop_mock() { [ -n "$MOCK" ] && kill "$MOCK" 2>/dev/null; MOCK=""; sleep 1; }
 clear_sent() { rm -f "$OUT"/otlp_v1_*; }
-sent() { cat "$OUT"/otlp_v1_* 2>/dev/null | tr -c '[:print:]\n' '.'; }
+sent() { cat "$OUT"/otlp_v1_* 2>/dev/null | LC_ALL=C tr -c '[:print:]\n' '.'; }
 expect() { if eval "$1"; then echo "PASS  $NAME $2"; else echo "FAIL  $NAME $2"; FAILED=1; fi; }
 mvid_of_sent() { sent | grep -o '"mvid":"[0-9a-f-]\{36\}"' | head -1 | cut -d'"' -f4; }
 
