@@ -1,0 +1,22 @@
+<Project>
+  <UsingTask TaskName="Zharp.Build.UploadSourceBundle" AssemblyFile="$(MSBuildThisFileDirectory)..\tasks\netstandard2.0\Zharp.Build.dll" />
+
+  <PropertyGroup>
+    <ZharpUploadSources Condition="'$(ZharpUploadSources)' == '' AND '$(Configuration)' == 'Release'">true</ZharpUploadSources>
+  </PropertyGroup>
+
+  <!-- Once per build of the project (not per inner build of each target framework that isn't the first). -->
+  <Target Name="ZharpUploadSourceBundle" AfterTargets="Build" Condition="'$(ZharpUploadSources)' == 'true' AND '$(DebugType)' != 'none'">
+    <ItemGroup>
+      <_ZharpSource Include="@(Compile)" Condition="'%(Compile.Extension)' == '.cs' AND !$([System.String]::Copy('%(Compile.FullPath)').StartsWith('$(MSBuildProjectDirectory)$([System.IO.Path]::DirectorySeparatorChar)obj'))" />
+    </ItemGroup>
+    <UploadSourceBundle
+      Assembly="@(IntermediateAssembly->'%(FullPath)')"
+      Sources="@(_ZharpSource->'%(FullPath)')"
+      ProjectDirectory="$(MSBuildProjectDirectory)"
+      Release="$(InformationalVersion)"
+      AppId="$(ZharpAppId)"
+      AuthToken="$(ZharpAuthToken)"
+      Url="$(ZharpUrl)" />
+  </Target>
+</Project>

@@ -13,6 +13,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Zharp.AwsLambda", "src\Zhar
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Zharp.GoogleCloudFunctions", "src\Zharp.GoogleCloudFunctions\Zharp.GoogleCloudFunctions.csproj", "{F43ACC68-03D1-485D-9B93-FD70FC73274C}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Zharp.Build", "src\Zharp.Build\Zharp.Build.csproj", "{B8FBC431-E431-4E49-A54E-09B3A0E66581}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -71,6 +73,18 @@ Global
 		{F43ACC68-03D1-485D-9B93-FD70FC73274C}.Release|x64.Build.0 = Release|Any CPU
 		{F43ACC68-03D1-485D-9B93-FD70FC73274C}.Release|x86.ActiveCfg = Release|Any CPU
 		{F43ACC68-03D1-485D-9B93-FD70FC73274C}.Release|x86.Build.0 = Release|Any CPU
+		{B8FBC431-E431-4E49-A54E-09B3A0E66581}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B8FBC431-E431-4E49-A54E-09B3A0E66581}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B8FBC431-E431-4E49-A54E-09B3A0E66581}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{B8FBC431-E431-4E49-A54E-09B3A0E66581}.Debug|x64.Build.0 = Debug|Any CPU
+		{B8FBC431-E431-4E49-A54E-09B3A0E66581}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{B8FBC431-E431-4E49-A54E-09B3A0E66581}.Debug|x86.Build.0 = Debug|Any CPU
+		{B8FBC431-E431-4E49-A54E-09B3A0E66581}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B8FBC431-E431-4E49-A54E-09B3A0E66581}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B8FBC431-E431-4E49-A54E-09B3A0E66581}.Release|x64.ActiveCfg = Release|Any CPU
+		{B8FBC431-E431-4E49-A54E-09B3A0E66581}.Release|x64.Build.0 = Release|Any CPU
+		{B8FBC431-E431-4E49-A54E-09B3A0E66581}.Release|x86.ActiveCfg = Release|Any CPU
+		{B8FBC431-E431-4E49-A54E-09B3A0E66581}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -80,5 +94,6 @@ Global
 		{6AC84833-CDE7-413D-87C4-5812C5BCD138} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{B6BC32A7-9735-41FF-9267-6294EDD92F26} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{F43ACC68-03D1-485D-9B93-FD70FC73274C} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
+		{B8FBC431-E431-4E49-A54E-09B3A0E66581} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 	EndGlobalSection
 EndGlobal

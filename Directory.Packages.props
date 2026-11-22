@@ -32,7 +32,7 @@
     <PackageVersion Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" />
     <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.404" />
     <PackageVersion Include="Google.Cloud.Functions.Hosting" Version="3.0.1" />
-    <PackageVersion Include="Microsoft.Build.Utilities.Core" Version="17.11.4" />
+    <PackageVersion Include="Microsoft.Build.Utilities.Core" Version="18.12.2" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.0.0" />
     <PackageVersion Include="xunit" Version="2.9.3" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />

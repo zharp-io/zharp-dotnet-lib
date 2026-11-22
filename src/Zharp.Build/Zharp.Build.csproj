@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <RootNamespace>Zharp.Build</RootNamespace>
+    <PackageId>Zharp.Build</PackageId>
+    <Description>Zharp's MSBuild step: after a Release build, uploads the project's sources as a source bundle under the build's PDB ID, so Zharp shows the code that ran for builds that don't embed their sources. Reference it with PrivateAssets="all".</Description>
+    <DevelopmentDependency>true</DevelopmentDependency>
+    <IncludeSymbols>false</IncludeSymbols>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
+    <NoWarn>$(NoWarn);NU5100;NU5128</NoWarn>
+    <TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);_ZharpPackTask</TargetsForTfmSpecificContentInPackage>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Build.Utilities.Core" PrivateAssets="all" ExcludeAssets="runtime" />
+    <!-- What MSBuild itself loads: compiled against the oldest it ships (.NET 8 SDK, VS 17.8). -->
+    <PackageReference Include="System.Reflection.Metadata" VersionOverride="8.0.0" PrivateAssets="all" ExcludeAssets="runtime" />
+    <None Include="build\Zharp.Build.props" Pack="true" PackagePath="build\" />
+    <None Include="build\Zharp.Build.targets" Pack="true" PackagePath="build\" />
+  </ItemGroup>
+  <Target Name="_ZharpPackTask">
+    <ItemGroup>
+      <TfmSpecificPackageFile Include="$(OutputPath)Zharp.Build.dll" PackagePath="tasks/$(TargetFramework)" />
+    </ItemGroup>
+  </Target>
+</Project>

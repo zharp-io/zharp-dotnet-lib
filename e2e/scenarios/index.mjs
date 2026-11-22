@@ -2,6 +2,7 @@
 import { web } from './web.mjs';
 import { consoleApp, httpLogs } from './console.mjs';
 import { lambda, gcf } from './serverless.mjs';
+import { buildBundle } from './build.mjs';
 
 export const SCENARIOS = [
   web({ tfm: 'net10.0', db: 'pg' }),
@@ -12,4 +13,5 @@ export const SCENARIOS = [
   httpLogs,
   lambda,
   gcf,
+  buildBundle,
 ];

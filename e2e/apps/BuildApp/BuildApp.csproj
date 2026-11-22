@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- The source-bundle fallback: sources NOT embedded; Zharp.Build uploads them after the Release build. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>$(AppTfm)</TargetFramework>
+    <EmbedAllSources>false</EmbedAllSources>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Zharp" Version="$(ZharpVersion)" />
+    <PackageReference Include="Zharp.Build" Version="$(ZharpVersion)" PrivateAssets="all" />
+  </ItemGroup>
+</Project>

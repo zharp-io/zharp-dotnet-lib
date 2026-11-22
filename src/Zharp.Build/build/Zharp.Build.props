@@ -1,0 +1,21 @@
+<Project>
+  <!--
+    Zharp.Build: after a Release build, the project's .cs files go to Zharp as a source bundle,
+    under the ID of the PDB this build wrote, so errors from this build show the code that ran.
+    The SDK sends the same ID with each error (zharp.build_id).
+
+      ZharpAppId          the app's ID in Zharp           (or ZHARP_APP_ID)
+      ZharpAuthToken      a workspace API key with the artifacts:write scope (or ZHARP_AUTH_TOKEN);
+                          keep it out of the project file: set it in CI
+      ZharpUrl            default https://api.zharp.io     (or ZHARP_URL)
+      ZharpUploadSources  true in Release builds; false turns it off
+
+    Without a token the step only says what it would upload.
+  -->
+  <PropertyGroup>
+    <ZharpAppId Condition="'$(ZharpAppId)' == ''">$(ZHARP_APP_ID)</ZharpAppId>
+    <ZharpAuthToken Condition="'$(ZharpAuthToken)' == ''">$(ZHARP_AUTH_TOKEN)</ZharpAuthToken>
+    <ZharpUrl Condition="'$(ZharpUrl)' == ''">$(ZHARP_URL)</ZharpUrl>
+    <ZharpUrl Condition="'$(ZharpUrl)' == ''">https://api.zharp.io</ZharpUrl>
+  </PropertyGroup>
+</Project>
