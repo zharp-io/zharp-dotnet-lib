@@ -81,6 +81,7 @@ namespace Zharp.Internal
 
         void Build(IEnumerable<IZharpIntegration>? extra)
         {
+            if (Settings.Debug) OTelDiagnostics.Start();
             foreach (string name in KnownIntegrations)
             {
                 try
@@ -455,6 +456,19 @@ namespace Zharp.Internal
         {
             if (disposed) return;
             Flush(5000);
+            if (App?.Handler != null)
+            {
+                // Apps: one short try at what waits on disk; the rest goes on the next launch.
+                try
+                {
+                    using var cts = new System.Threading.CancellationTokenSource(2000);
+                    App.Handler.Drain(cts.Token).Wait(2500);
+                }
+                catch
+                {
+                    // Next launch.
+                }
+            }
             disposed = true;
             AppDomain.CurrentDomain.UnhandledException -= OnUnhandled;
             TaskScheduler.UnobservedTaskException -= OnUnobserved;

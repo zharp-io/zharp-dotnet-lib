@@ -189,6 +189,7 @@ namespace Zharp.Internal.Apps
                 int status = (int)response.StatusCode;
                 if (status >= 200 && status < 300)
                 {
+                    debug("sent " + signal + " (" + body.Length + " bytes)");
                     if (saved != null) outbox.Delete(saved);
                     DrainLater();
                     return Sent();
@@ -197,6 +198,7 @@ namespace Zharp.Internal.Apps
                 {
                     if (saved == null) outbox.Save(signal, body);
                     debug("kept for later (" + status + ")");
+                    RetryLater();
                     return Sent();
                 }
                 // Refused for good (a bad key, a malformed batch): sending it again won't help.
@@ -207,7 +209,8 @@ namespace Zharp.Internal.Apps
             catch (Exception e)
             {
                 if (saved == null) outbox.Save(signal, body);
-                debug("offline, kept for later: " + e.Message);
+                debug("offline, kept for later: " + e.Message + (e.InnerException != null ? " (" + e.InnerException.Message + ")" : ""));
+                RetryLater();
                 return Sent();
             }
         }
@@ -227,13 +230,40 @@ namespace Zharp.Internal.Apps
             return copy;
         }
 
+        Timer? retry;
+        int retrySeconds = 15;
+
+        /// <summary>A batch is waiting on disk: try again a little later (15 s, doubling to 5 minutes), not only after the next batch.</summary>
+        void RetryLater()
+        {
+            lock (outbox)
+            {
+                if (retry != null) return;
+                int seconds = retrySeconds;
+                retrySeconds = Math.Min(300, retrySeconds * 2);
+                retry = new Timer(_ =>
+                {
+                    lock (outbox)
+                    {
+                        retry?.Dispose();
+                        retry = null;
+                    }
+                    DrainLater();
+                }, null, seconds * 1000, Timeout.Infinite);
+            }
+        }
+
         /// <summary>Send what's in the outbox, in the background, once at a time.</summary>
         public void DrainLater()
         {
             if (Interlocked.CompareExchange(ref draining, 1, 0) != 0) return;
             Task.Run(async () =>
             {
-                try { await Drain(CancellationToken.None).ConfigureAwait(false); }
+                try
+                {
+                    if (await Drain(CancellationToken.None).ConfigureAwait(false)) retrySeconds = 15;
+                    else RetryLater();
+                }
                 catch (Exception e) { debug("outbox: " + e.Message); }
                 finally { Interlocked.Exchange(ref draining, 0); }
             });
