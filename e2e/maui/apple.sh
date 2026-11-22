@@ -17,9 +17,10 @@ if [ "$PLATFORM" = ios ]; then
   xcrun simctl install "$DEVICE" "$BUNDLE"
   run() { # mode seconds
     xcrun simctl terminate "$DEVICE" "$APP" 2>/dev/null
-    xcrun simctl launch "$DEVICE" "$APP" "$1"
+    xcrun simctl launch --stdout="$OUT-$1.log" --stderr="$OUT-$1.err" "$DEVICE" "$APP" "$1"
     sleep "$2"
     xcrun simctl terminate "$DEVICE" "$APP" 2>/dev/null
+    tail -25 "$OUT-$1.err" "$OUT-$1.log" 2>/dev/null | sed "s/^/    /"
   }
   outbox() { find "$(xcrun simctl get_app_container "$DEVICE" "$APP" data)" -path '*zharp/outbox*' -type f 2>/dev/null | tr '\n' ' '; }
 else
