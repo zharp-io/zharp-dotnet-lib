@@ -166,7 +166,9 @@ still shows the code of any of your frames that remain. Nothing needs changing i
 
 **No code shown with errors.** Check that the project sets `<EmbedAllSources>true</EmbedAllSources>`
 and ships its `.pdb` files (`dotnet publish` does by default). A build with
-`<DebugType>none</DebugType>` has no PDB to read: use `Zharp.Build` instead.
+`<DebugType>none</DebugType>` has no PDB at all — no file names or line numbers in its stacks, and no
+build ID for `Zharp.Build` either — so no code can be shown. Switch to `<DebugType>portable</DebugType>`
+(or `embedded`, which keeps the PDB inside the DLL).
 
 ## Settings
 
