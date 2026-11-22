@@ -80,12 +80,10 @@ export function web({ tfm, db }) {
       }));
       out.push(...expectError(got, 'caught failed query', (e) => errors(e) === db.missing, { handled: true, attributes: { 'db.statement': /no_such_table/, 'zharp.mechanism': 'db' } }));
       out.push(...expectError(got, 'exception logged at Error', (e) => /ArgumentOutOfRangeException$/.test(errors(e)), { handled: true, context: true, attributes: { 'zharp.mechanism': 'logger' } }));
+      // EF Core's EnsureDeleted/EnsureCreated ask whether the database exists at startup: not errors.
       out.push(nothingElse(got, [
         (e) => /InvalidOperationException$|KeyNotFoundException$|ArgumentOutOfRangeException$/.test(errors(e)),
         (e) => [db.unique, db.missing].some((t) => (t instanceof RegExp ? t.test(errors(e)) : t === errors(e))),
-        // EF Core's EnsureDeleted/EnsureCreated probe for a database that isn't there yet: a real,
-        // caught failed query at startup.
-        (e) => /^(InvalidCatalogName|InvalidDatabase|LoginFailed)$/.test(errors(e)) && Number(e.handled) === 1,
       ]));
       const hello = got.logs.find((l) => l.body === 'Saying hello');
       out.push(result('ZHARP_LOGS=true: ILogger lines arrive, in their trace', hello && hello.traceId === call.traceId, hello ? `trace=${hello.traceId}` : `${got.logs.length} logs`));

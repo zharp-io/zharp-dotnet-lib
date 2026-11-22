@@ -155,6 +155,37 @@ namespace Zharp.Internal
             }
         }
 
+        /// <summary>
+        /// Whether an exception was raised and caught inside EF Core's check for whether the
+        /// database exists (a provider's <c>DatabaseCreator.Exists</c>/<c>HasTables</c>, which
+        /// EnsureCreated, EnsureDeleted and Migrate call): "database does not exist" is its answer.
+        /// Its stack ends at the frame that caught it, so the check is on those frames.
+        /// </summary>
+        public static bool IsExistenceProbe(Exception error)
+        {
+            try
+            {
+                StackFrame[]? frames = new StackTrace(error, false).GetFrames();
+                if (frames == null) return false;
+                foreach (StackFrame frame in frames)
+                {
+                    System.Reflection.MethodBase? method = frame.GetMethod();
+                    Type? type = method?.DeclaringType;
+                    if (type == null) continue;
+                    // Async methods run in a state machine nested in the creator: <ExistsAsync>d__5.
+                    Type owner = type.DeclaringType != null && type.Name.StartsWith("<", StringComparison.Ordinal) ? type.DeclaringType : type;
+                    if (!owner.Name.EndsWith("DatabaseCreator", StringComparison.Ordinal)) continue;
+                    string name = method!.Name == "MoveNext" ? type.Name : method.Name;
+                    if (name.Contains("Exists") || name.Contains("HasTables")) return true;
+                }
+            }
+            catch
+            {
+                // Unknown: report it.
+            }
+            return false;
+        }
+
         /// <summary>A failure known only from the driver's exception.</summary>
         public static DbFailure FromException(Exception error)
         {

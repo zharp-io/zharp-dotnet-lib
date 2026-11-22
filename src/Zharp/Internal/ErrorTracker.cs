@@ -168,10 +168,6 @@ namespace Zharp.Internal
             {
                 DbFailure? query = core.Settings.CaptureQueryErrors ? DbFailures.OfSpan(span) : null;
                 bool isRoot = span.Parent == null;
-                if (!isRoot && DbFailures.IsDbSpan(span))
-                {
-                    lock (lastDb) lastDb[span.TraceId.ToHexString()] = span;
-                }
                 if (query != null && !query.Done)
                 {
                     if (isRoot)
@@ -218,31 +214,25 @@ namespace Zharp.Internal
             Lone(query);
         }
 
-        /// <summary>The last query span of each running trace, for failures no span saw.</summary>
-        readonly Dictionary<string, Activity> lastDb = new Dictionary<string, Activity>();
-
         /// <summary>
-        /// The query a database exception most likely came from, when no span or EF Core event
-        /// tied them: SQL Server reports a failed batch while its results are read, after
-        /// SqlClient's span ended without error. Its statement is the trace's last query.
+        /// A failed query known only from the driver's exception, when no span or EF Core event tied
+        /// it to a statement. HEURISTIC, kept narrow: SQL Server reports a failed batch while its
+        /// results are read, after SqlClient's command span ended without error; the statement is
+        /// taken only from the last command run on the same connection (SqlException's
+        /// ClientConnectionId, matched with the ConnectionId of SqlClient's diagnostics). When that
+        /// can't be told, the report says which database failed and how, with no statement.
         /// </summary>
-        public DbFailure? Guess(Exception error, Activity? span)
+        public DbFailure? FromDriverException(Exception error)
         {
             System.Data.Common.DbException? db = null;
             for (Exception? e = error; e != null && db == null; e = e.InnerException) db = e as System.Data.Common.DbException;
             if (db == null) return null;
-            var failure = DbFailures.FromException(db);
-            if (span != null)
+            DbFailure failure = DbFailures.FromException(db);
+            SqlCommands.Command? last = SqlCommands.LastOn(db);
+            if (last != null)
             {
-                Activity? last;
-                lock (lastDb) lastDb.TryGetValue(span.TraceId.ToHexString(), out last);
-                DbFailure? fromSpan = last != null ? DbFailures.Describe(last, db) : null;
-                if (fromSpan != null && (failure.System == null || fromSpan.System == failure.System))
-                {
-                    failure.Statement = fromSpan.Statement;
-                    failure.Database = fromSpan.Database;
-                    failure.System = fromSpan.System;
-                }
+                failure.Statement = last.Text;
+                failure.Database = last.Database;
             }
             DbFailures.Remember(db, failure);
             return failure;
@@ -279,18 +269,6 @@ namespace Zharp.Internal
         }
 
         void Finish(Activity root)
-        {
-            try
-            {
-                FinishTrace(root);
-            }
-            finally
-            {
-                lock (lastDb) lastDb.Remove(root.TraceId.ToHexString());
-            }
-        }
-
-        void FinishTrace(Activity root)
         {
             TraceState? st = Take(root.TraceId.ToHexString());
             if (st == null) return;

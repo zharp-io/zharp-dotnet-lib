@@ -152,6 +152,7 @@ namespace Zharp.Internal
 
             DbFailures.Hook();
             DbFailures.HookEfCore(this);
+            SqlCommands.Hook();
             if (Settings.CaptureUncaught)
             {
                 AppDomain.CurrentDomain.UnhandledException += OnUnhandled;
@@ -208,8 +209,11 @@ namespace Zharp.Internal
             try
             {
                 if (disposed || !Errors.TryMark(error)) return;
-                DbFailure? query = DbFailures.OfException(error) ?? (Settings.CaptureQueryErrors ? Errors.Guess(error, span) : null);
+                DbFailure? query = DbFailures.OfException(error) ?? (Settings.CaptureQueryErrors ? Errors.FromDriverException(error) : null);
                 if (query != null && query.Done) query = null;
+                // EF Core asking whether the database exists yet (EnsureCreated, EnsureDeleted,
+                // Migrate): the "no such database" it catches is the answer, not a failure.
+                if (query != null && DbFailures.IsExistenceProbe(query.Error ?? error)) return;
                 if (query != null)
                 {
                     if (mechanism == "logger") mechanism = "db";
@@ -231,6 +235,7 @@ namespace Zharp.Internal
             {
                 if (disposed || query.Done) return;
                 query.Done = true;
+                if (query.Error != null && DbFailures.IsExistenceProbe(query.Error)) return;
                 if (query.Error != null)
                 {
                     if (!Errors.TryMark(query.Error)) return;
