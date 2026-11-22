@@ -1,0 +1,9 @@
+<Project>
+  <!-- An ordinary app: none of the SDK repository's build settings. -->
+  <PropertyGroup>
+    <ZharpVersion Condition="'$(ZharpVersion)' == ''">0.2.0</ZharpVersion>
+    <ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+</Project>

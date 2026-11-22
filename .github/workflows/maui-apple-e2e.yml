@@ -1,0 +1,64 @@
+name: MAUI iOS and Mac Catalyst end to end
+
+# The MAUI sample (e2e/maui/ShopApp) in Release on the iOS simulator and as a Mac Catalyst app,
+# Zharp.Build uploading its PDBs to a stand-in Zharp, through: a caught error, a crash while
+# offline (sent on the next launch), and a hang. What arrived is kept as a workflow artifact.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, feat/apps]
+    paths: ['src/**', 'e2e/maui/**', 'e2e/mock_zharp.py', '.github/workflows/maui-apple-e2e.yml']
+
+jobs:
+  apple:
+    runs-on: macos-latest
+    timeout-minutes: 75
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [ios, maccatalyst]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use the newest Xcode on the runner
+        run: |
+          sudo xcode-select -s "$(ls -d /Applications/Xcode_*.app | sort -V | tail -1)"
+          xcodebuild -version
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: MAUI for ${{ matrix.platform }}
+        run: sudo dotnet workload install maui-${{ matrix.platform }}
+
+      - name: Pack Zharp, Zharp.Build and Zharp.Maui
+        run: |
+          dotnet pack src/Zharp/Zharp.csproj -c Release -o artifacts/packages
+          dotnet pack src/Zharp.Build/Zharp.Build.csproj -c Release -o artifacts/packages
+          dotnet pack src/Zharp.Maui/Zharp.Maui.csproj -c Release -o artifacts/packages -p:ZharpMauiTargets=net10.0-${{ matrix.platform }}
+
+      - name: Build the app in Release (Zharp.Build uploads to the stand-in)
+        env:
+          ZHARP_AUTH_TOKEN: zat_maui_e2e
+          ZHARP_APP_ID: "9"
+          ZHARP_URL: http://127.0.0.1:4318
+        run: |
+          python3 e2e/mock_zharp.py "$RUNNER_TEMP/build-${{ matrix.platform }}" > "$RUNNER_TEMP/build-mock.log" 2>&1 &
+          sleep 2
+          if [ "${{ matrix.platform }}" = ios ]; then RID=iossimulator-arm64; else RID=maccatalyst-arm64; fi
+          dotnet build e2e/maui/ShopApp -c Release -f net10.0-${{ matrix.platform }} -p:RuntimeIdentifier=$RID -v n | grep -E "Zharp|error|ILLink" | head -60
+          ls -la "$RUNNER_TEMP/build-${{ matrix.platform }}/artifacts"
+          ls "$RUNNER_TEMP/build-${{ matrix.platform }}/artifacts" | grep -q "portable-pdb-.*-ShopApp.pdb" || { echo "::error::no portable PDB uploaded"; exit 1; }
+
+      - name: Run
+        run: bash e2e/maui/apple.sh ${{ matrix.platform }}
+
+      - name: Keep what was sent
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: maui-${{ matrix.platform }}-sent
+          path: |
+            ${{ runner.temp }}/build-${{ matrix.platform }}
+            ${{ runner.temp }}/${{ matrix.platform }}*

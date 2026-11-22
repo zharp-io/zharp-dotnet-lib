@@ -1,0 +1,75 @@
+name: MAUI Android end to end
+
+# The MAUI sample (e2e/maui/ShopApp) in Release for the Android emulator, Zharp.Build uploading
+# its (trimmed) PDBs to a stand-in Zharp, run on an emulator (KVM) through: a caught error, a crash
+# while offline (sent on the next launch), and a hang. What arrived is kept as a workflow artifact.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, feat/apps]
+    paths: ['src/**', 'e2e/maui/**', 'e2e/mock_zharp.py', '.github/workflows/maui-android-e2e.yml']
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: MAUI for Android
+        run: dotnet workload install maui-android
+
+      - name: Pack Zharp, Zharp.Build and Zharp.Maui (Android)
+        run: |
+          dotnet pack src/Zharp/Zharp.csproj -c Release -o artifacts/packages
+          dotnet pack src/Zharp.Build/Zharp.Build.csproj -c Release -o artifacts/packages
+          dotnet pack src/Zharp.Maui/Zharp.Maui.csproj -c Release -o artifacts/packages -p:ZharpMauiTargets=net10.0-android
+          ls artifacts/packages
+
+      - name: Build the app in Release (Zharp.Build uploads to the stand-in)
+        env:
+          ZHARP_AUTH_TOKEN: zat_maui_e2e
+          ZHARP_APP_ID: "9"
+          ZHARP_URL: http://127.0.0.1:4318
+        run: |
+          python3 e2e/mock_zharp.py "$RUNNER_TEMP/build" > "$RUNNER_TEMP/build-mock.log" 2>&1 &
+          sleep 2
+          dotnet build e2e/maui/ShopApp -c Release -f net10.0-android -p:RuntimeIdentifiers=android-x64 -v n | grep -E "Zharp|error|warning ZH|ILLink" | head -60
+          ls -la "$RUNNER_TEMP/build/artifacts"
+          ls e2e/maui/ShopApp/bin/Release/net10.0-android/ || true
+          ls "$RUNNER_TEMP/build/artifacts" | grep -q "portable-pdb-.*-ShopApp.pdb" || { echo "::error::no portable PDB uploaded"; exit 1; }
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Run on the emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot
+          script: bash e2e/maui/android.sh
+
+      - name: Keep what was sent
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: maui-android-sent
+          path: |
+            ${{ runner.temp }}/build
+            ${{ runner.temp }}/android*
+            e2e/maui/ShopApp/obj/Release/net10.0-android/android-x64/linked/ShopApp.*
