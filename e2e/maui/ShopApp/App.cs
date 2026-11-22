@@ -2,7 +2,7 @@ namespace Shop.Mobile;
 
 /// <summary>
 /// What the e2e run asks for, from the launch (Android: the "mode" extra; iOS, Mac Catalyst and
-/// Windows: the first argument): error, crash, hang or quit.
+/// Windows: the first argument, or ZHARP_E2E_MODE): error, crash, hang or quit.
 /// </summary>
 public static class Mode
 {
@@ -10,6 +10,9 @@ public static class Mode
 
     static string FromArgs()
     {
+        // iOS simulator: simctl passes SIMCTL_CHILD_ZHARP_E2E_MODE to the app as ZHARP_E2E_MODE.
+        string? fromEnv = Environment.GetEnvironmentVariable("ZHARP_E2E_MODE");
+        if (!string.IsNullOrEmpty(fromEnv)) return fromEnv;
         string[] args = Environment.GetCommandLineArgs();
         foreach (string mode in new[] { "error", "crash", "hang", "quit" })
         {

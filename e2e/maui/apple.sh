@@ -17,7 +17,7 @@ if [ "$PLATFORM" = ios ]; then
   xcrun simctl install "$DEVICE" "$BUNDLE"
   run() { # mode seconds
     xcrun simctl terminate "$DEVICE" "$APP" 2>/dev/null
-    xcrun simctl launch --stdout="$OUT-$1.log" --stderr="$OUT-$1.err" "$DEVICE" "$APP" "$1"
+    SIMCTL_CHILD_ZHARP_E2E_MODE="$1" xcrun simctl launch --stdout="$OUT-$1.log" --stderr="$OUT-$1.err" "$DEVICE" "$APP" "$1"
     sleep "$2"
     xcrun simctl terminate "$DEVICE" "$APP" 2>/dev/null
     tail -25 "$OUT-$1.err" "$OUT-$1.log" 2>/dev/null | sed "s/^/    /"
@@ -28,7 +28,7 @@ else
   BUNDLE="$(ls -d e2e/maui/ShopApp/bin/Release/net10.0-maccatalyst/*/ShopApp.app | head -1)"
   echo "app $BUNDLE"
   run() { # mode seconds
-    "$BUNDLE/Contents/MacOS/ShopApp" "$1" > "$OUT-$1.log" 2>&1 &
+    ZHARP_E2E_MODE="$1" "$BUNDLE/Contents/MacOS/ShopApp" "$1" > "$OUT-$1.log" 2>&1 &
     local pid=$!
     sleep "$2"
     kill "$pid" 2>/dev/null
