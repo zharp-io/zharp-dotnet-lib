@@ -27,7 +27,7 @@ namespace Zharp.Internal
         /// <summary>Namespaces that are never the app's own code (the same list as the backend's).</summary>
         static readonly string[] LibraryPrefixes =
         {
-            "System.", "Microsoft.", "Windows.", "Android.", "Java.", "Foundation.", "UIKit.", "ObjCRuntime.", "Npgsql.",
+            "System.", "Microsoft.", "MS.", "Windows.", "Android.", "Java.", "Foundation.", "UIKit.", "ObjCRuntime.", "Npgsql.",
             "MySqlConnector.", "Newtonsoft.", "Grpc.", "Google.", "Amazon.", "Azure.", "OpenTelemetry.", "Zharp.",
             "Serilog.", "NLog.", "Dapper.", "Polly.", "MediatR.", "AutoMapper.", "FluentValidation.", "StackExchange.",
             "Swashbuckle.", "Hangfire.", "MassTransit.", "RabbitMQ.", "Confluent.", "MongoDB.", "Pomelo.", "Oracle.",

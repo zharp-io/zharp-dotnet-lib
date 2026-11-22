@@ -109,8 +109,42 @@ namespace Zharp.Internal
         public static bool IsAppMethod(MethodBase method)
         {
             string? type = method.DeclaringType?.FullName;
-            if (type == null) return true;
-            return !Stacks.IsLibraryType(type);
+            if (type != null && Stacks.IsLibraryType(type)) return false;
+            return !IsPlatformAssembly(method);
+        }
+
+        /// <summary>
+        /// Signed by Microsoft (the runtime, WPF, Windows Forms, MAUI) or by Xamarin/Mono (Android and
+        /// iOS bindings): never the app's code, whatever its namespaces (WPF's MS.Internal…).
+        /// </summary>
+        static readonly string[] PlatformKeys =
+        {
+            "b03f5f7f11d50a3a", "b77a5c561934e089", "31bf3856ad364e35", "cc7b13ffcd2ddd51", "7cec85d7bea7798e",
+            "adb9793829ddae60", "0738eb9f132ed756", "84e04ff9cfb79065",
+        };
+
+        static readonly System.Collections.Concurrent.ConcurrentDictionary<Assembly, bool> Platform = new System.Collections.Concurrent.ConcurrentDictionary<Assembly, bool>();
+
+        static bool IsPlatformAssembly(MethodBase method)
+        {
+            Assembly assembly;
+            try { assembly = method.Module.Assembly; }
+            catch { return false; }
+            return Platform.GetOrAdd(assembly, a =>
+            {
+                try
+                {
+                    byte[]? token = a.GetName().GetPublicKeyToken();
+                    if (token == null || token.Length == 0) return false;
+                    var hex = new StringBuilder(16);
+                    foreach (byte b in token) hex.Append(b.ToString("x2"));
+                    return Array.IndexOf(PlatformKeys, hex.ToString()) >= 0;
+                }
+                catch
+                {
+                    return false;
+                }
+            });
         }
 
         static string? Mvid(MethodBase method)
