@@ -47,8 +47,10 @@ jobs:
           ZHARP_URL: http://127.0.0.1:4318
         run: |
           python3 e2e/mock_zharp.py "$RUNNER_TEMP/build" > "$RUNNER_TEMP/build-mock.log" 2>&1 &
+          MOCK=$!
           sleep 2
           dotnet build e2e/maui/ShopApp -c Release -f net10.0-android -p:ShopTargets=net10.0-android -p:RuntimeIdentifiers=android-x64 -v n | grep -E "Zharp|error|warning ZH|ILLink" | head -60
+          kill $MOCK   # the scenarios start their own stand-in on the same port
           ls -la "$RUNNER_TEMP/build/artifacts"
           ls e2e/maui/ShopApp/bin/Release/net10.0-android/ || true
           ls "$RUNNER_TEMP/build/artifacts" | grep -q "portable-pdb-.*-ShopApp.pdb" || { echo "::error::no portable PDB uploaded"; exit 1; }

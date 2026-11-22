@@ -7,7 +7,10 @@ MOCK=""
 start_mock() {
   python3 e2e/mock_zharp.py "$OUT" >> "$OUT-mock.log" 2>&1 &
   MOCK=$!
-  for _ in $(seq 1 20); do curl -s -o /dev/null -X POST http://127.0.0.1:4318/ping && return 0; sleep 0.3; done
+  for _ in $(seq 1 20); do
+    kill -0 "$MOCK" 2>/dev/null || { echo "the stand-in endpoint exited (port 4318 taken?)"; cat "$OUT-mock.log"; exit 1; }
+    curl -s -o /dev/null -X POST http://127.0.0.1:4318/ping && return 0; sleep 0.3
+  done
   echo "the stand-in endpoint did not start"; exit 1
 }
 stop_mock() { [ -n "$MOCK" ] && kill "$MOCK" 2>/dev/null; MOCK=""; sleep 1; }

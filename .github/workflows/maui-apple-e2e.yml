@@ -11,7 +11,7 @@ on:
 
 jobs:
   apple:
-    runs-on: macos-latest
+    runs-on: macos-26
     timeout-minutes: 75
     strategy:
       fail-fast: false
@@ -22,6 +22,7 @@ jobs:
 
       - name: Use the newest Xcode on the runner
         run: |
+          ls -d /Applications/Xcode*.app
           sudo xcode-select -s "$(ls -d /Applications/Xcode_*.app | sort -V | tail -1)"
           xcodebuild -version
 
@@ -50,9 +51,11 @@ jobs:
           ZHARP_URL: http://127.0.0.1:4318
         run: |
           python3 e2e/mock_zharp.py "$RUNNER_TEMP/build-${{ matrix.platform }}" > "$RUNNER_TEMP/build-mock.log" 2>&1 &
+          MOCK=$!
           sleep 2
           if [ "${{ matrix.platform }}" = ios ]; then RID=iossimulator-arm64; else RID=maccatalyst-arm64; fi
           dotnet build e2e/maui/ShopApp -c Release -f net10.0-${{ matrix.platform }} -p:ShopTargets=net10.0-${{ matrix.platform }} -p:RuntimeIdentifier=$RID -p:ValidateXcodeVersion=false -v n | grep -E "Zharp|error|ILLink" | head -60
+          kill $MOCK   # the scenarios start their own stand-in on the same port
           ls -la "$RUNNER_TEMP/build-${{ matrix.platform }}/artifacts"
           ls "$RUNNER_TEMP/build-${{ matrix.platform }}/artifacts" | grep -q "portable-pdb-.*-ShopApp.pdb" || { echo "::error::no portable PDB uploaded"; exit 1; }
 
