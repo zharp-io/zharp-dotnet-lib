@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>net10.0-windows;net462</TargetFrameworks>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <!-- Builds (and packs) on Linux too; runs on Windows only. -->
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <RootNamespace>Zharp</RootNamespace>
+    <PackageId>Zharp.Windows</PackageId>
+    <PackageTags>$(PackageTags);wpf;winforms;windows-forms;desktop;crash-reporting</PackageTags>
+    <Description>Zharp for WPF and Windows Forms apps: ZharpApp.Start() reports crashes (saved to disk and sent on the next launch), UI hangs, windows and forms as screens, sessions and a device ID, with an offline queue. Add Zharp.Build so release stacks get their lines.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="All" />
+    <ProjectReference Include="..\Zharp\Zharp.csproj" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(TargetFramework)' == 'net462'">
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" PrivateAssets="All" />
+  </ItemGroup>
+</Project>
