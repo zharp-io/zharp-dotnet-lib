@@ -9,7 +9,7 @@ const CLICKHOUSE = process.env.ZHARP_E2E_CLICKHOUSE ?? 'zharp-clickhouse';
  * becomes the frames' code, which needs the backend's .NET frame parser).
  */
 export function storedErrors(appId) {
-  const q = `SELECT exception_type, message, handled, attributes FROM zharp.error_events WHERE app_id=${Number(appId)} FORMAT JSONEachRow`;
+  const q = `SELECT exception_type, message, handled, attributes, stacktrace FROM zharp.error_events WHERE app_id=${Number(appId)} FORMAT JSONEachRow`;
   const r = spawnSync('docker', ['exec', CLICKHOUSE, 'clickhouse-client', '-q', q], { encoding: 'utf8', maxBuffer: 64 << 20 });
   if (r.status !== 0) return null;
   return r.stdout.split('\n').filter(Boolean).map((l) => JSON.parse(l));
