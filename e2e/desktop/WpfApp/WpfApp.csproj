@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- A WPF app as people write them, in code (no XAML), set up the way `npm init zharp` does it:
+       Zharp.Windows, and Zharp.Build so release stacks get their lines. -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <RootNamespace>Shop.Desktop</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Zharp.Windows" Version="$(ZharpVersion)" />
+    <PackageReference Include="Zharp.Build" Version="$(ZharpVersion)" PrivateAssets="all" />
+  </ItemGroup>
+</Project>

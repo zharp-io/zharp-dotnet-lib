@@ -14,7 +14,7 @@ namespace Zharp
     public static class ZharpSdk
     {
         /// <summary>This SDK's version.</summary>
-        public const string Version = "0.1.0";
+        public const string Version = "0.2.0";
 
         /// <summary>
         /// Start Zharp: errors (unhandled exceptions, failed queries, exceptions logged at Error),

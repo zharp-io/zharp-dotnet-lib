@@ -12,7 +12,7 @@
     <!-- binAspNetApp.dll.config gets the binding redirects; the workflow copies them into web.config. -->
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <GenerateBindingRedirectsOutputType>true</GenerateBindingRedirectsOutputType>
-    <ZharpVersion Condition="'$(ZharpVersion)' == ''">0.1.0</ZharpVersion>
+    <ZharpVersion Condition="'$(ZharpVersion)' == ''">0.2.0</ZharpVersion>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System.Web" />

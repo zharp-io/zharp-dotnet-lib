@@ -1,0 +1,11 @@
+<Project>
+  <!-- Ordinary apps: none of the SDK repository's build settings. -->
+  <PropertyGroup>
+    <ZharpVersion Condition="'$(ZharpVersion)' == ''">0.2.0</ZharpVersion>
+    <ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <!-- So the apps also build (not run) on Linux. -->
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+  </PropertyGroup>
+</Project>

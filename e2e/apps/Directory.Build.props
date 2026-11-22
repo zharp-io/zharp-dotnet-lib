@@ -4,7 +4,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <AppTfm Condition="'$(AppTfm)' == ''">net10.0</AppTfm>
-    <ZharpVersion Condition="'$(ZharpVersion)' == ''">0.1.0</ZharpVersion>
+    <ZharpVersion Condition="'$(ZharpVersion)' == ''">0.2.0</ZharpVersion>
     <ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
     <!-- The code that ran: sources inside the PDB (what `npm init zharp` turns on). -->
     <EmbedAllSources Condition="'$(EmbedAllSources)' == ''">true</EmbedAllSources>
