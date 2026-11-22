@@ -63,7 +63,7 @@ Clear-Sent
 Run-App $UiError | Write-Output
 $sent = Sent
 Expect ($sent -match "Desktop cart is empty") "UI-thread exception reported ($UiError)"
-if ($UiError -eq "handled") { Expect ($sent -match "zharp.mechanism.{0,6}wpf") "mechanism wpf" } else { Expect ($sent -match "zharp.mechanism.{0,6}winforms") "mechanism winforms" }
+if ($UiError -eq "handled") { Expect ($sent -match "zharp\.mechanism[\s\S]{0,8}wpf") "mechanism wpf" } else { Expect ($sent -match "zharp\.mechanism[\s\S]{0,8}winforms") "mechanism winforms" }
 
 # 3. A crash while offline: written to disk, sent on the next launch.
 Clear-Sent
