@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>net462</TargetFrameworks>
+    <RootNamespace>Zharp.AspNet</RootNamespace>
+    <PackageId>Zharp.AspNet</PackageId>
+    <Description>Zharp for classic ASP.NET on .NET Framework (MVC 5, Web API 2, WebForms) on IIS: installs itself (no web.config edit), traces requests by route, reports each failure once with the code that ran, records headers (secrets filtered) and failed queries.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="OpenTelemetry.Instrumentation.AspNet" />
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" PrivateAssets="All" />
+    <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="All" />
+    <Reference Include="System.Web" />
+    <Reference Include="System.Configuration" />
+    <ProjectReference Include="..\Zharp\Zharp.csproj" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,103 @@
+name: Classic ASP.NET end to end (Windows)
+
+# Classic ASP.NET (System.Web, .NET Framework 4.8) can't run in Linux Docker. A real app
+# (e2e/windows/AspNetApp) runs in IIS Express against a stand-in OTLP endpoint, and what it sent
+# is checked: Zharp.AspNet installed itself, requests named by route, one error per failure with
+# the code that ran, secret headers filtered, a failed SqlClient query on LocalDB.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['src/**', 'e2e/windows/**', '.github/workflows/windows-aspnet-e2e.yml']
+
+jobs:
+  aspnet:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+
+      - name: Pack the Zharp packages
+        run: dotnet pack Zharp.sln -c Release -o artifacts/packages
+
+      - name: Build the app
+        working-directory: e2e/windows/AspNetApp
+        run: dotnet build -c Release
+
+      - name: Binding redirects into web.config
+        working-directory: e2e/windows/AspNetApp
+        shell: pwsh
+        run: |
+          [xml]$redirects = Get-Content bin/AspNetApp.dll.config
+          [xml]$web = Get-Content web.config
+          $runtime = $web.ImportNode($redirects.configuration.runtime, $true)
+          $web.configuration.AppendChild($runtime) | Out-Null
+          $web.Save((Resolve-Path web.config))
+          Get-Content web.config
+
+      - name: Start LocalDB
+        shell: pwsh
+        run: sqllocaldb start MSSQLLocalDB
+
+      - name: Start the stand-in endpoint
+        shell: pwsh
+        run: |
+          Start-Process python -ArgumentList "e2e/windows/mock_otlp.py", "$env:RUNNER_TEMP/bodies" -RedirectStandardOutput "$env:RUNNER_TEMP/mock.log" -RedirectStandardError "$env:RUNNER_TEMP/mock.err"
+          Start-Sleep 2
+
+      - name: Run the app in IIS Express and call it
+        shell: pwsh
+        env:
+          ZHARP_KEY: zpk_windows_e2e
+          ZHARP_ENDPOINT: http://127.0.0.1:4318/otlp
+          ZHARP_ENVIRONMENT: e2e
+        run: |
+          $iis = @("$env:ProgramFiles\IIS Express\iisexpress.exe", "${env:ProgramFiles(x86)}\IIS Express\iisexpress.exe") | Where-Object { Test-Path $_ } | Select-Object -First 1
+          if (-not $iis) { choco install iisexpress -y --no-progress; $iis = "$env:ProgramFiles\IIS Express\iisexpress.exe" }
+          $site = (Resolve-Path e2e/windows/AspNetApp).Path
+          $server = Start-Process $iis -ArgumentList "/path:$site", "/port:8080" -PassThru
+          $ok = $false
+          for ($i = 0; $i -lt 60 -and -not $ok; $i++) {
+            try { Invoke-WebRequest http://localhost:8080/hello -UseBasicParsing | Out-Null; $ok = $true } catch { Start-Sleep 1 }
+          }
+          if (-not $ok) { throw "the app never answered" }
+          $headers = @{ traceparent = "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01"; Authorization = "Bearer very-secret"; Cookie = "a=b" }
+          Invoke-WebRequest http://localhost:8080/hello -Headers $headers -UseBasicParsing | Out-Null
+          Invoke-WebRequest http://localhost:8080/users/5 -UseBasicParsing | Out-Null
+          foreach ($path in "/boom", "/db/fail") {
+            try { Invoke-WebRequest "http://localhost:8080$path" -UseBasicParsing | Out-Null } catch { "$path -> $($_.Exception.Response.StatusCode)" }
+          }
+          Start-Sleep 8
+          Stop-Process -Id $server.Id
+
+      - name: Check what was sent
+        shell: pwsh
+        run: |
+          $bodies = "$env:RUNNER_TEMP/bodies"
+          Get-Content "$env:RUNNER_TEMP/mock.log"
+          $traces = (Get-ChildItem $bodies -Filter "otlp_v1_traces-*" | ForEach-Object { [System.Text.Encoding]::UTF8.GetString([IO.File]::ReadAllBytes($_.FullName)) }) -join "`n"
+          $logs = (Get-ChildItem $bodies -Filter "otlp_v1_logs-*" | ForEach-Object { [System.Text.Encoding]::UTF8.GetString([IO.File]::ReadAllBytes($_.FullName)) }) -join "`n"
+          $fail = @()
+          function Expect($ok, $what) { if ($ok) { "PASS  $what" } else { "FAIL  $what"; $script:fail += $what } }
+          Expect ($traces -match "aspnet-classic-e2e") "service name from appSettings"
+          Expect ($traces -match "users/\{id\}") "requests named by route"
+          Expect ($traces -match "http.request.header.authorization" -and $traces -match "\[Filtered\]" -and $traces -notmatch "very-secret") "secret headers filtered"
+          Expect ($traces -match "zharp.deferred") "span exception events deferred"
+          Expect (([regex]::Matches($logs, "Classic cart is empty")).Count -ge 1) "the request failure reported"
+          Expect ($logs -match "zharp.mechanism" -and $logs -match "aspnet") "mechanism aspnet"
+          Expect ($logs -match "zharp.source_context" -and $logs -match "Global.cs") "the code that ran (embedded sources)"
+          Expect ($logs -match "InvalidObjectName" -and $logs -match "no_such_table") "failed SqlClient query, named type and statement"
+          # Once per failure: the message appears in one error record (its text is in the body and attributes).
+          $records = ([regex]::Matches($logs, "exception.stacktrace")).Count
+          Expect ($records -eq 2) "one error per failure ($records error records)"
+          if ($fail.Count) { throw "failed: $($fail -join '; ')" }
+
+      - name: What was sent
+        if: always()
+        shell: pwsh
+        run: Get-ChildItem "$env:RUNNER_TEMP/bodies" -ErrorAction SilentlyContinue | ForEach-Object { "== $($_.Name)"; [System.Text.Encoding]::UTF8.GetString([IO.File]::ReadAllBytes($_.FullName)) -replace '[^\x20-\x7E\n]', '.' | Select-Object -First 1 }

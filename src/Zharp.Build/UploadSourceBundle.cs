@@ -39,7 +39,7 @@ namespace Zharp.Build
         {
             try
             {
-                BuildId = PdbId(Assembly);
+                BuildId = SourceBundles.PdbId(Assembly);
                 if (BuildId == null)
                 {
                     Log.LogMessage(MessageImportance.High, "Zharp: no PDB ID in {0} (DebugType none?): no source bundle.", Assembly);
@@ -56,7 +56,7 @@ namespace Zharp.Build
                     Log.LogWarning("Zharp: set ZHARP_APP_ID (or the ZharpAppId property) to upload the source bundle; a token is set but no application ID.");
                     return true;
                 }
-                byte[] bundle = Bundle(files);
+                byte[] bundle = SourceBundles.Bundle(files);
                 Upload(bundle);
                 Log.LogMessage(MessageImportance.High, "Zharp: uploaded {0} source file(s) for build {1}.", files.Count, BuildId);
                 return true;
@@ -67,18 +67,6 @@ namespace Zharp.Build
                 Log.LogWarning("Zharp: source bundle not uploaded: {0}", e.Message);
                 return true;
             }
-        }
-
-        /// <summary>The PDB's ID, as the runtime reads it from the module (CodeView GUID).</summary>
-        public static string? PdbId(string assembly)
-        {
-            using var stream = File.OpenRead(assembly);
-            using var pe = new PEReader(stream);
-            foreach (DebugDirectoryEntry entry in pe.ReadDebugDirectory())
-            {
-                if (entry.Type == DebugDirectoryEntryType.CodeView) return pe.ReadCodeViewDebugDirectoryData(entry).Guid.ToString("D");
-            }
-            return null;
         }
 
         Dictionary<string, string> Collect()
@@ -98,26 +86,6 @@ namespace Zharp.Build
                 files[(folder + "/" + relative).Replace('\\', '/')] = File.ReadAllText(path);
             }
             return files;
-        }
-
-        public static byte[] Bundle(Dictionary<string, string> files)
-        {
-            var json = new StringBuilder("{\"files\":{");
-            bool first = true;
-            foreach (var kv in files.OrderBy(k => k.Key, StringComparer.Ordinal))
-            {
-                if (!first) json.Append(',');
-                first = false;
-                json.Append(Quote(kv.Key)).Append(':').Append(Quote(kv.Value));
-            }
-            json.Append("}}");
-            using var output = new MemoryStream();
-            using (var gzip = new GZipStream(output, CompressionLevel.Optimal, leaveOpen: true))
-            {
-                byte[] bytes = Encoding.UTF8.GetBytes(json.ToString());
-                gzip.Write(bytes, 0, bytes.Length);
-            }
-            return output.ToArray();
         }
 
         void Upload(byte[] bundle)
@@ -140,6 +108,42 @@ namespace Zharp.Build
                 string body = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
                 throw new InvalidOperationException($"{(int)response.StatusCode} from {target}: {(body.Length > 300 ? body.Substring(0, 300) : body)}");
             }
+        }
+    }
+
+    /// <summary>The bundle's format and the build's ID, apart from MSBuild (tests load this without it).</summary>
+    public static class SourceBundles
+    {
+        /// <summary>The PDB's ID, as the runtime reads it from the module (CodeView GUID).</summary>
+        public static string? PdbId(string assembly)
+        {
+            using var stream = File.OpenRead(assembly);
+            using var pe = new PEReader(stream);
+            foreach (DebugDirectoryEntry entry in pe.ReadDebugDirectory())
+            {
+                if (entry.Type == DebugDirectoryEntryType.CodeView) return pe.ReadCodeViewDebugDirectoryData(entry).Guid.ToString("D");
+            }
+            return null;
+        }
+
+        public static byte[] Bundle(Dictionary<string, string> files)
+        {
+            var json = new StringBuilder("{\"files\":{");
+            bool first = true;
+            foreach (var kv in files.OrderBy(k => k.Key, StringComparer.Ordinal))
+            {
+                if (!first) json.Append(',');
+                first = false;
+                json.Append(Quote(kv.Key)).Append(':').Append(Quote(kv.Value));
+            }
+            json.Append("}}");
+            using var output = new MemoryStream();
+            using (var gzip = new GZipStream(output, CompressionLevel.Optimal, leaveOpen: true))
+            {
+                byte[] bytes = Encoding.UTF8.GetBytes(json.ToString());
+                gzip.Write(bytes, 0, bytes.Length);
+            }
+            return output.ToArray();
         }
 
         static string Quote(string value)

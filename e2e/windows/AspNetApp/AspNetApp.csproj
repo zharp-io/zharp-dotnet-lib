@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- A classic ASP.NET app (System.Web, .NET Framework 4.8) for IIS Express: Global.asax,
+       web.config and bin\ in this folder. Zharp.AspNet installs itself: no web.config edit. -->
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <OutputPath>bin\</OutputPath>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
+    <LangVersion>latest</LangVersion>
+    <DebugType>portable</DebugType>
+    <EmbedAllSources>true</EmbedAllSources>
+    <!-- binAspNetApp.dll.config gets the binding redirects; the workflow copies them into web.config. -->
+    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+    <GenerateBindingRedirectsOutputType>true</GenerateBindingRedirectsOutputType>
+    <ZharpVersion Condition="'$(ZharpVersion)' == ''">0.1.0</ZharpVersion>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System.Web" />
+    <Reference Include="System.Data" />
+    <PackageReference Include="Zharp.AspNet" Version="$(ZharpVersion)" />
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
+  </ItemGroup>
+</Project>

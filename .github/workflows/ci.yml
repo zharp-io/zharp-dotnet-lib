@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+            11.0.x
+      - name: Build (all targets, net462 through reference assemblies)
+        run: dotnet build Zharp.sln -c Release
+      - name: Unit tests on .NET 8, 10 and 11
+        run: |
+          for tfm in net8.0 net10.0 net11.0; do
+            dotnet test test/Zharp.Tests/Zharp.Tests.csproj -c Release -f $tfm --logger "console;verbosity=normal"
+          done
+      - name: Pack
+        run: dotnet pack Zharp.sln -c Release -o artifacts/packages
+      - uses: actions/upload-artifact@v4
+        with:
+          name: packages
+          path: artifacts/packages
+
+  windows-net462:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - name: Unit tests on .NET Framework 4.8
+        run: dotnet test test/Zharp.Tests/Zharp.Tests.csproj -c Release -f net48

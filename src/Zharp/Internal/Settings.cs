@@ -128,7 +128,10 @@ namespace Zharp.Internal
             catch { return null; }
         }
 
-        static string DefaultService() => Entry()?.GetName().Name ?? "dotnet-app";
+        /// <summary>The service name when there's no entry assembly (IIS: the site's name).</summary>
+        internal static string? FallbackService;
+
+        static string DefaultService() => Entry()?.GetName().Name ?? FallbackService ?? "dotnet-app";
 
         /// <summary>The entry assembly's informational version: .NET 8+ SDKs add the commit after a '+'.</summary>
         static string? DefaultRelease()
