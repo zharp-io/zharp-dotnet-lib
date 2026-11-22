@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 
@@ -34,6 +35,8 @@ namespace Zharp.Internal
         sealed class Held
         {
             public Exception Error = null!;
+            public string Mechanism = "logger";
+            /// <summary>The host saw it escape: unhandled, unless the response says it was dealt with (below 500).</summary>
             public bool Uncaught;
             public Activity? Span;
         }
@@ -140,18 +143,22 @@ namespace Zharp.Internal
             lock (st) st.ReportedAny = true;
         }
 
-        /// <summary>An exception an app logger wrote at Error or above.</summary>
-        public void OnLogged(Exception error, bool uncaught, Activity? span)
+        /// <summary>
+        /// An exception seen during a request — written by an app logger at Error, or by the host
+        /// as what escaped the request (<paramref name="uncaught"/>) — held until the request ends;
+        /// outside a request, reported now.
+        /// </summary>
+        public void Hold(Exception error, string mechanism, bool uncaught, Activity? span)
         {
             if (IsReported(error)) return;
             Activity? root = span != null ? LocalRoot(span) : null;
             if (span != null && root != null && !IsStopped(root))
             {
                 TraceState st = State(span.TraceId.ToHexString());
-                lock (st) st.Held.Add(new Held { Error = error, Uncaught = uncaught, Span = span });
+                lock (st) st.Held.Add(new Held { Error = error, Mechanism = mechanism, Uncaught = uncaught, Span = span });
                 return;
             }
-            core.Report(error, handled: !uncaught, mechanism: uncaught ? "uncaught" : "logger", span: span);
+            core.Report(error, handled: !uncaught, mechanism: mechanism, span: span);
         }
 
         /// <summary>A span ended: collect a failed query; at the end of a root, report what's left.</summary>
@@ -220,12 +227,15 @@ namespace Zharp.Internal
             bool failed = status.HasValue ? status.Value >= 500 : root.Status == ActivityStatusCode.Error;
             lock (st)
             {
-                foreach (Held h in st.Held)
+                // What the host saw escape first: a library may have logged the same failure
+                // (EF Core logs a failed save at Error) before it reached the host.
+                foreach (Held h in st.Held.Where(h => h.Uncaught).Concat(st.Held.Where(h => !h.Uncaught)))
                 {
                     if (IsReported(h.Error)) continue;
-                    // The request answered 5xx and a logger saw what it failed with.
-                    bool uncaught = h.Uncaught;
-                    core.Report(h.Error, handled: !uncaught, mechanism: uncaught ? "uncaught" : "logger", span: h.Span);
+                    // What escaped into the host's error handling failed the request, unless the
+                    // handler turned it into an answer below 500.
+                    bool unhandled = h.Uncaught && (failed || !status.HasValue);
+                    core.Report(h.Error, handled: !unhandled, mechanism: h.Mechanism, span: h.Span);
                     st.ReportedAny = true;
                 }
                 if (failed && !st.ReportedAny)

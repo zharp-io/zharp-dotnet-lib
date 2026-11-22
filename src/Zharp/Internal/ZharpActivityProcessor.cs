@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Reflection;
 using System.Diagnostics;
 using OpenTelemetry;
 
@@ -48,20 +50,34 @@ namespace Zharp.Internal
         }
 
         /// <summary>
-        /// An event's tags are the collection it was created with, so they can be added to in place
-        /// (an Activity's events can't be replaced).
+        /// An Activity's events can't be replaced, but an event's tags are a list it holds by
+        /// reference, so they can be added to in place: an <c>ActivityTagsCollection</c> on older
+        /// DiagnosticSource versions, an internal linked list (with a public <c>Add</c>) on newer ones.
         /// </summary>
         static void MarkExceptionEvents(Activity activity)
         {
+            var deferred = new KeyValuePair<string, object?>("zharp.deferred", "true");
             foreach (ActivityEvent e in activity.Events)
             {
                 if (e.Name != "exception") continue;
-                if (e.Tags is ActivityTagsCollection tags)
+                IEnumerable<KeyValuePair<string, object?>> tags = e.Tags;
+                bool marked = false;
+                foreach (var kv in tags)
                 {
-                    tags["zharp.deferred"] = "true";
+                    if (kv.Key == "zharp.deferred") { marked = true; break; }
                 }
+                if (marked) continue;
+                if (tags is ActivityTagsCollection collection)
+                {
+                    collection["zharp.deferred"] = "true";
+                    continue;
+                }
+                MethodInfo? add = AddMethods.GetOrAdd(tags.GetType(), t => t.GetMethod("Add", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, new[] { typeof(KeyValuePair<string, object?>) }, null));
+                add?.Invoke(tags, new object[] { deferred });
             }
         }
+
+        static readonly ConcurrentDictionary<Type, MethodInfo?> AddMethods = new ConcurrentDictionary<Type, MethodInfo?>();
 
         static void RedactUrls(Activity activity)
         {

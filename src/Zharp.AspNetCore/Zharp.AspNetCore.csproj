@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>net10.0;net8.0</TargetFrameworks>
+    <RootNamespace>Zharp.AspNetCore</RootNamespace>
+    <PackageId>Zharp.AspNetCore</PackageId>
+    <Description>Zharp for ASP.NET Core: builder.Services.AddZharp() traces every request by its route, reports each failure once with the code that ran, records request and response headers (secrets filtered) and failed queries.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" />
+    <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="All" />
+    <ProjectReference Include="..\Zharp\Zharp.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Zharp.Tests" />
+    <InternalsVisibleTo Include="Zharp.GoogleCloudFunctions" />
+  </ItemGroup>
+</Project>

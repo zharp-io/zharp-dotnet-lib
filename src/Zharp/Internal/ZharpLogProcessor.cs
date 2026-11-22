@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using OpenTelemetry;
@@ -73,11 +74,15 @@ namespace Zharp.Internal
                 {
                     if (record.LogLevel >= LogLevel.Error)
                     {
-                        core.Errors.OnLogged(record.Exception, IsUncaughtCategory(record.CategoryName), Activity.Current);
+                        bool uncaught = IsUncaughtCategory(record.CategoryName);
+                        string mechanism = !uncaught ? "logger" : record.CategoryName!.StartsWith("Microsoft.AspNetCore", StringComparison.Ordinal) ? "aspnetcore" : "hosting";
+                        core.Errors.Hold(record.Exception, mechanism, uncaught, Activity.Current);
                     }
                     record.Exception = null;
                 }
-                if (core.Settings.Logs) export?.OnEnd(record);
+                if (!core.Settings.Logs || export == null) return;
+                AddUser(record);
+                export.OnEnd(record);
             }
             catch (Exception e)
             {
@@ -85,6 +90,23 @@ namespace Zharp.Internal
             }
         }
 #pragma warning restore CS0618
+
+        /// <summary>The request's user and session on its log lines, as on its spans.</summary>
+        void AddUser(LogRecord record)
+        {
+            Activity? span = Activity.Current;
+            if (span == null) return;
+            List<KeyValuePair<string, object?>>? extra = null;
+            foreach (var kv in core.Users.AttributesFor(span))
+            {
+                if (!kv.Key.StartsWith("enduser.", StringComparison.Ordinal) && kv.Key != "session.id") continue;
+                (extra ??= new List<KeyValuePair<string, object?>>()).Add(kv);
+            }
+            if (extra == null) return;
+            var all = new List<KeyValuePair<string, object?>>(record.Attributes ?? Array.Empty<KeyValuePair<string, object?>>());
+            all.AddRange(extra);
+            record.Attributes = all;
+        }
 
         bool parentSet;
 

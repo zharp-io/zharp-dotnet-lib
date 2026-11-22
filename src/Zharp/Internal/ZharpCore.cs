@@ -180,6 +180,7 @@ namespace Zharp.Internal
                 if (query != null && query.Done) query = null;
                 if (query != null)
                 {
+                    if (mechanism == "logger") mechanism = "db";
                     query.Done = true;
                     if (query.Error != null) Errors.TryMark(query.Error);
                 }

@@ -1,0 +1,11 @@
+<Project>
+  <!-- The e2e apps are ordinary apps: no settings from the SDK's own build. -->
+  <PropertyGroup>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <ZharpVersion Condition="'$(ZharpVersion)' == ''">0.1.0</ZharpVersion>
+    <ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
+    <!-- The code that ran: sources inside the PDB (what `npm init zharp` turns on). -->
+    <EmbedAllSources Condition="'$(EmbedAllSources)' == ''">true</EmbedAllSources>
+  </PropertyGroup>
+</Project>
