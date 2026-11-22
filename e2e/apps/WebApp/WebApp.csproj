@@ -1,12 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
   <PropertyGroup>
-    <TargetFramework Condition="'$(TargetFramework)' == ''">net10.0</TargetFramework>
-    <EfVersion Condition="'$(TargetFramework)' == 'net8.0'">8.0.34</EfVersion>
-    <NpgsqlEfVersion Condition="'$(TargetFramework)' == 'net8.0'">8.0.11</NpgsqlEfVersion>
-    <EfVersion Condition="'$(TargetFramework)' == 'net10.0'">10.0.15</EfVersion>
-    <NpgsqlEfVersion Condition="'$(TargetFramework)' == 'net10.0'">10.0.4</NpgsqlEfVersion>
-    <EfVersion Condition="'$(TargetFramework)' == 'net11.0'">11.0.0</EfVersion>
-    <NpgsqlEfVersion Condition="'$(TargetFramework)' == 'net11.0'">11.0.0</NpgsqlEfVersion>
+    <TargetFramework>$(AppTfm)</TargetFramework>
+    <EfVersion Condition="'$(AppTfm)' == 'net8.0'">8.0.34</EfVersion>
+    <NpgsqlEfVersion Condition="'$(AppTfm)' == 'net8.0'">8.0.11</NpgsqlEfVersion>
+    <EfVersion Condition="'$(AppTfm)' == 'net10.0'">10.0.15</EfVersion>
+    <NpgsqlEfVersion Condition="'$(AppTfm)' == 'net10.0'">10.0.4</NpgsqlEfVersion>
+    <EfVersion Condition="'$(AppTfm)' == 'net11.0'">11.0.0</EfVersion>
+    <NpgsqlEfVersion Condition="'$(AppTfm)' == 'net11.0'">11.0.0</NpgsqlEfVersion>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Zharp.AspNetCore" Version="$(ZharpVersion)" />

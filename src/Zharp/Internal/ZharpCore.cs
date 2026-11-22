@@ -136,6 +136,7 @@ namespace Zharp.Internal
             errorLogger = LoggerFactory.CreateLogger(ErrorsCategory);
 
             DbFailures.Hook();
+            DbFailures.HookEfCore(this);
             if (Settings.CaptureUncaught)
             {
                 AppDomain.CurrentDomain.UnhandledException += OnUnhandled;
@@ -176,7 +177,7 @@ namespace Zharp.Internal
             try
             {
                 if (disposed || !Errors.TryMark(error)) return;
-                DbFailure? query = DbFailures.OfException(error);
+                DbFailure? query = DbFailures.OfException(error) ?? (Settings.CaptureQueryErrors ? Errors.Guess(error, span) : null);
                 if (query != null && query.Done) query = null;
                 if (query != null)
                 {
@@ -297,11 +298,12 @@ namespace Zharp.Internal
 
         void OnUnhandled(object sender, UnhandledExceptionEventArgs e)
         {
+            DebugLog("unhandled exception" + (e.IsTerminating ? " (terminating)" : ""));
             if (e.ExceptionObject is Exception error)
             {
                 Report(error, handled: false, mechanism: "uncaught", span: Activity.Current, level: e.IsTerminating ? LogLevel.Critical : LogLevel.Error);
             }
-            if (e.IsTerminating) Flush(5000);
+            if (e.IsTerminating) DebugLog("flushed: " + Flush(5000));
         }
 
         void OnUnobserved(object? sender, UnobservedTaskExceptionEventArgs e)
@@ -310,7 +312,7 @@ namespace Zharp.Internal
             Report(error, handled: false, mechanism: "unobserved-task", span: null);
         }
 
-        void OnExit(object? sender, EventArgs e) => Flush(3000);
+        void OnExit(object? sender, EventArgs e) => Dispose();
 
         /// <summary>Send everything waiting, within <paramref name="timeoutMilliseconds"/>.</summary>
         public bool Flush(int timeoutMilliseconds)

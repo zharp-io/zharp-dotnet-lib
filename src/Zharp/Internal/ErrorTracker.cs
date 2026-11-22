@@ -168,6 +168,10 @@ namespace Zharp.Internal
             {
                 DbFailure? query = core.Settings.CaptureQueryErrors ? DbFailures.OfSpan(span) : null;
                 bool isRoot = span.Parent == null;
+                if (!isRoot && DbFailures.IsDbSpan(span))
+                {
+                    lock (lastDb) lastDb[span.TraceId.ToHexString()] = span;
+                }
                 if (query != null && !query.Done)
                 {
                     if (isRoot)
@@ -187,6 +191,61 @@ namespace Zharp.Internal
             {
                 core.DebugLog("span end: " + e.Message);
             }
+        }
+
+        /// <summary>A failed query seen outside a span's end (EF Core's report): pending like the others.</summary>
+        public void AddQuery(DbFailure query, Activity? span)
+        {
+            Activity? root = span != null ? LocalRoot(span) : null;
+            if (span != null && root != null && !IsStopped(root))
+            {
+                TraceState st = State(span.TraceId.ToHexString());
+                lock (st)
+                {
+                    // The driver's span already failed with this statement, without its exception.
+                    DbFailure? same = st.Queries.FirstOrDefault(q => q.Error == null && !q.Done && q.Statement == query.Statement);
+                    if (same != null && query.Error != null)
+                    {
+                        same.Error = query.Error;
+                        same.Code ??= query.Code;
+                        DbFailures.Remember(query.Error, same);
+                        return;
+                    }
+                    st.Queries.Add(query);
+                }
+                return;
+            }
+            Lone(query);
+        }
+
+        /// <summary>The last query span of each running trace, for failures no span saw.</summary>
+        readonly Dictionary<string, Activity> lastDb = new Dictionary<string, Activity>();
+
+        /// <summary>
+        /// The query a database exception most likely came from, when no span or EF Core event
+        /// tied them: SQL Server reports a failed batch while its results are read, after
+        /// SqlClient's span ended without error. Its statement is the trace's last query.
+        /// </summary>
+        public DbFailure? Guess(Exception error, Activity? span)
+        {
+            System.Data.Common.DbException? db = null;
+            for (Exception? e = error; e != null && db == null; e = e.InnerException) db = e as System.Data.Common.DbException;
+            if (db == null) return null;
+            var failure = DbFailures.FromException(db);
+            if (span != null)
+            {
+                Activity? last;
+                lock (lastDb) lastDb.TryGetValue(span.TraceId.ToHexString(), out last);
+                DbFailure? fromSpan = last != null ? DbFailures.Describe(last, db) : null;
+                if (fromSpan != null && (failure.System == null || fromSpan.System == failure.System))
+                {
+                    failure.Statement = fromSpan.Statement;
+                    failure.Database = fromSpan.Database;
+                    failure.System = fromSpan.System;
+                }
+            }
+            DbFailures.Remember(db, failure);
+            return failure;
         }
 
         void Lone(DbFailure query)
@@ -220,6 +279,18 @@ namespace Zharp.Internal
         }
 
         void Finish(Activity root)
+        {
+            try
+            {
+                FinishTrace(root);
+            }
+            finally
+            {
+                lock (lastDb) lastDb.Remove(root.TraceId.ToHexString());
+            }
+        }
+
+        void FinishTrace(Activity root)
         {
             TraceState? st = Take(root.TraceId.ToHexString());
             if (st == null) return;

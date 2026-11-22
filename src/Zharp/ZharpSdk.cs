@@ -25,7 +25,20 @@ namespace Zharp
         {
             var options = new ZharpOptions();
             configure?.Invoke(options);
-            return Start(options, null) ?? (IDisposable)new Nothing();
+            ZharpCore? core = Start(options, null);
+            return core == null ? new Nothing() : new Handle(core);
+        }
+
+        /// <summary>
+        /// Disposing sends what's waiting but leaves Zharp running until the process exits: in an
+        /// async Main, <c>using var zharp</c> is disposed before an exception that ends the app
+        /// reaches the unhandled-exception handler, and that crash must still be reported.
+        /// </summary>
+        sealed class Handle : IDisposable
+        {
+            readonly ZharpCore core;
+            public Handle(ZharpCore core) { this.core = core; }
+            public void Dispose() => core.Flush(5000);
         }
 
         internal static ZharpCore? Start(ZharpOptions options, IConfiguration? configuration, IZharpIntegration? integration = null)
@@ -68,6 +81,15 @@ namespace Zharp
 
         /// <summary>A tag on every error and request from now on; null removes it.</summary>
         public static void SetTag(string key, string? value) => ZharpCore.Current?.Users.SetTag(key, value);
+
+        static readonly ActivitySource Source = new ActivitySource("Zharp", Version);
+
+        /// <summary>
+        /// A span for work outside a request — a job, a message, a scheduled task — so its logs,
+        /// queries and errors are grouped as one trace. Dispose it when the work is done.
+        /// <code>using (ZharpSdk.StartSpan("import-orders")) { … }</code>
+        /// </summary>
+        public static Activity? StartSpan(string name, ActivityKind kind = ActivityKind.Internal) => Source.StartActivity(name, kind);
 
         /// <summary>Send everything waiting. False when it didn't finish in time.</summary>
         public static bool Flush(TimeSpan? timeout = null) =>

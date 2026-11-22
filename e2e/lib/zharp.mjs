@@ -12,7 +12,10 @@ const H = { Authorization: `Bearer ${token}`, 'x-workspace-id': process.env.ZHAR
 export const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 export async function api(path, init = {}) {
-  const res = await fetch(`${API}/${path}`, { ...init, headers: { ...H, ...(init.headers ?? {}) } });
+  const go = () => fetch(`${API}/${path}`, { ...init, headers: { ...H, ...(init.headers ?? {}) } });
+  // A kept-alive connection the server closed while a synchronous `docker wait` held the event
+  // loop fails once: try again on a new one.
+  const res = await go().catch(() => sleep(500).then(go));
   const text = await res.text();
   try { return JSON.parse(text); } catch { return { status: res.status, text }; }
 }

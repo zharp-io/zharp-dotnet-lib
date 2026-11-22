@@ -49,6 +49,66 @@ namespace Zharp.Internal
             AppDomain.CurrentDomain.FirstChanceException += (_, e) => OnThrown(e.Exception);
         }
 
+        const string EfCommandError = "Microsoft.EntityFrameworkCore.Database.Command.CommandError";
+
+        /// <summary>
+        /// EF Core's own report of a failed command, for any provider: the statement and the
+        /// exception together. It covers what a driver's span can't — SQL Server's errors that
+        /// arrive while EF reads a batch's results, after SqlClient's span ended, and SQLite.
+        /// </summary>
+        public static void HookEfCore(ZharpCore core)
+        {
+            DiagnosticListener.AllListeners.Subscribe(new Observer<DiagnosticListener>(listener =>
+            {
+                if (listener.Name != "Microsoft.EntityFrameworkCore") return;
+                listener.Subscribe(new Observer<KeyValuePair<string, object?>>(e => OnEfEvent(core, e)), (name, _, _) => name == EfCommandError);
+            }));
+        }
+
+        static void OnEfEvent(ZharpCore core, KeyValuePair<string, object?> e)
+        {
+            if (e.Key != EfCommandError || e.Value == null || !core.Settings.CaptureQueryErrors) return;
+            try
+            {
+                Type type = e.Value.GetType();
+                var command = type.GetProperty("Command")?.GetValue(e.Value) as System.Data.Common.DbCommand;
+                var error = type.GetProperty("Exception")?.GetValue(e.Value) as Exception;
+                if (error == null || OfException(error) != null) return;
+                var failure = new DbFailure
+                {
+                    System = SystemOfCommand(command),
+                    Statement = command?.CommandText,
+                    Database = SafeDatabase(command),
+                    Code = CodeOf(error),
+                    Error = error,
+                    Span = Activity.Current,
+                };
+                ByException.Add(error, failure);
+                core.Errors.AddQuery(failure, Activity.Current);
+            }
+            catch (Exception ex)
+            {
+                core.DebugLog("ef event: " + ex.Message);
+            }
+        }
+
+        static string? SafeDatabase(System.Data.Common.DbCommand? command)
+        {
+            try { return command?.Connection?.Database; }
+            catch { return null; }
+        }
+
+        static string? SystemOfCommand(System.Data.Common.DbCommand? command)
+        {
+            string name = command?.GetType().Name ?? "";
+            if (name.StartsWith("Npgsql", StringComparison.Ordinal)) return "postgresql";
+            if (name == "SqlCommand") return "mssql";
+            if (name.StartsWith("Sqlite", StringComparison.Ordinal)) return "sqlite";
+            if (name.StartsWith("MySql", StringComparison.Ordinal)) return "mysql";
+            if (name.StartsWith("Oracle", StringComparison.Ordinal)) return "oracle";
+            return null;
+        }
+
         static void OnThrown(Exception error)
         {
             try
@@ -82,7 +142,32 @@ namespace Zharp.Internal
             }
         }
 
-        static DbFailure Describe(Activity span, Exception? error) => new DbFailure
+        public static void Remember(Exception error, DbFailure failure)
+        {
+            try
+            {
+                ByException.Remove(error);
+                ByException.Add(error, failure);
+            }
+            catch
+            {
+                // Seen twice at once: either will do.
+            }
+        }
+
+        /// <summary>A failure known only from the driver's exception.</summary>
+        public static DbFailure FromException(Exception error)
+        {
+            string name = error.GetType().Name;
+            string? system = name == "PostgresException" || name == "NpgsqlException" ? "postgresql"
+                : name == "SqlException" ? "mssql"
+                : name == "MySqlException" ? "mysql"
+                : name == "SqliteException" ? "sqlite"
+                : name.StartsWith("Oracle", StringComparison.Ordinal) ? "oracle" : null;
+            return new DbFailure { System = system, Code = CodeOf(error), Error = error };
+        }
+
+        public static DbFailure Describe(Activity span, Exception? error) => new DbFailure
         {
             System = SystemOf(span),
             Statement = Tag(span, "db.statement") ?? Tag(span, "db.query.text"),
@@ -180,5 +265,18 @@ namespace Zharp.Internal
             if (!string.IsNullOrEmpty(exceptionType)) return exceptionType!;
             return (system != null && Systems.TryGetValue(system, out string? s) ? s : "Database") + "Error";
         }
+    }
+
+    /// <summary>An IObserver from a callback.</summary>
+    internal sealed class Observer<T> : IObserver<T>
+    {
+        readonly Action<T> next;
+        public Observer(Action<T> next) { this.next = next; }
+        public void OnNext(T value)
+        {
+            try { next(value); } catch { /* never into the app */ }
+        }
+        public void OnError(Exception error) { }
+        public void OnCompleted() { }
     }
 }
