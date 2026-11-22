@@ -1,18 +1,56 @@
 <Project>
   <UsingTask TaskName="Zharp.Build.UploadSourceBundle" AssemblyFile="$(MSBuildThisFileDirectory)..\tasks\netstandard2.0\Zharp.Build.dll" />
+  <UsingTask TaskName="Zharp.Build.UploadAppSymbols" AssemblyFile="$(MSBuildThisFileDirectory)..\tasks\netstandard2.0\Zharp.Build.dll" />
 
   <PropertyGroup>
     <ZharpUploadSources Condition="'$(ZharpUploadSources)' == '' AND '$(Configuration)' == 'Release'">true</ZharpUploadSources>
+    <!-- Apps (MAUI, WPF, Windows Forms) ship without their PDBs or sources: Zharp gets both,
+         keyed by each assembly's MVID, and finds lines from the method token and IL offset. -->
+    <ZharpApp Condition="'$(ZharpApp)' == '' AND ('$(UseMaui)' == 'true' OR '$(UseWPF)' == 'true' OR '$(UseWindowsForms)' == 'true')">true</ZharpApp>
+    <ZharpUploadSymbols Condition="'$(ZharpUploadSymbols)' == '' AND '$(ZharpApp)' == 'true' AND '$(Configuration)' == 'Release'">true</ZharpUploadSymbols>
   </PropertyGroup>
 
-  <!-- Once per build of the project (not per inner build of each target framework that isn't the first). -->
-  <Target Name="ZharpUploadSourceBundle" AfterTargets="Build" Condition="'$(ZharpUploadSources)' == 'true' AND '$(DebugType)' != 'none'">
+  <Target Name="_ZharpSourceItems">
     <ItemGroup>
       <_ZharpSource Include="@(Compile)" Condition="'%(Compile.Extension)' == '.cs' AND !$([System.String]::Copy('%(Compile.FullPath)').StartsWith('$(MSBuildProjectDirectory)$([System.IO.Path]::DirectorySeparatorChar)obj'))" />
     </ItemGroup>
+  </Target>
+
+  <!-- Servers: the source bundle under the PDB ID (once per build of the project). -->
+  <Target Name="ZharpUploadSourceBundle" AfterTargets="Build" DependsOnTargets="_ZharpSourceItems" Condition="'$(ZharpApp)' != 'true' AND '$(ZharpUploadSources)' == 'true' AND '$(DebugType)' != 'none'">
     <UploadSourceBundle
       Assembly="@(IntermediateAssembly->'%(FullPath)')"
       Sources="@(_ZharpSource->'%(FullPath)')"
+      ProjectDirectory="$(MSBuildProjectDirectory)"
+      Release="$(InformationalVersion)"
+      AppId="$(ZharpAppId)"
+      AuthToken="$(ZharpAuthToken)"
+      Url="$(ZharpUrl)" />
+  </Target>
+
+  <!-- Apps: the PDB and the sources under the assembly's MVID, as built... -->
+  <Target Name="ZharpUploadAppSymbols" AfterTargets="Build" DependsOnTargets="_ZharpSourceItems" Condition="'$(ZharpUploadSymbols)' == 'true' AND '$(DebugType)' != 'none'">
+    <UploadAppSymbols
+      Assemblies="@(IntermediateAssembly->'%(FullPath)')"
+      Sources="@(_ZharpSource->'%(FullPath)')"
+      UploadSources="$(ZharpUploadSources)"
+      ProjectDirectory="$(MSBuildProjectDirectory)"
+      Release="$(InformationalVersion)"
+      AppId="$(ZharpAppId)"
+      AuthToken="$(ZharpAuthToken)"
+      Url="$(ZharpUrl)" />
+  </Target>
+
+  <!-- ...and as trimmed: ILLink writes the app's assemblies again, with new MVIDs and PDBs. -->
+  <Target Name="ZharpUploadTrimmedSymbols" AfterTargets="ILLink" DependsOnTargets="_ZharpSourceItems" Condition="'$(ZharpUploadSymbols)' == 'true' AND '$(DebugType)' != 'none' AND '$(IntermediateLinkDir)' != ''">
+    <ItemGroup>
+      <_ZharpTrimmed Include="$(IntermediateLinkDir)$(TargetFileName)" Condition="Exists('$(IntermediateLinkDir)$(TargetFileName)')" />
+    </ItemGroup>
+    <UploadAppSymbols
+      Condition="'@(_ZharpTrimmed)' != ''"
+      Assemblies="@(_ZharpTrimmed->'%(FullPath)')"
+      Sources="@(_ZharpSource->'%(FullPath)')"
+      UploadSources="$(ZharpUploadSources)"
       ProjectDirectory="$(MSBuildProjectDirectory)"
       Release="$(InformationalVersion)"
       AppId="$(ZharpAppId)"
