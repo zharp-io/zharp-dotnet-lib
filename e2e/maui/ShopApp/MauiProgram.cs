@@ -1,5 +1,3 @@
-using Microsoft.Extensions.Logging;
-
 namespace Shop.Mobile;
 
 public static class MauiProgram
@@ -23,7 +21,6 @@ public static class MauiProgram
                 o.Environment = "e2e";
                 o.Debug = true;
             }, app => app.HangThreshold = TimeSpan.FromSeconds(2));
-        builder.Logging.AddDebug();
         return builder.Build();
     }
 }

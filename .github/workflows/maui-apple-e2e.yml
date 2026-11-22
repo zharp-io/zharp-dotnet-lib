@@ -35,7 +35,7 @@ jobs:
           dotnet --version
 
       - name: MAUI for ${{ matrix.platform }}
-        run: sudo dotnet workload install maui-${{ matrix.platform }}
+        run: dotnet workload install maui-${{ matrix.platform }}
 
       - name: Pack Zharp, Zharp.Build and Zharp.Maui
         run: |
