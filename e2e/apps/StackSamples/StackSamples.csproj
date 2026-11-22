@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Prints real .NET stacks (Debug and Release) for the backend's frame-parsing tests. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>$(AppTfm)</TargetFramework>
+  </PropertyGroup>
+</Project>
