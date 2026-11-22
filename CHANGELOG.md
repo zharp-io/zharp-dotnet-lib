@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.2.0 (apps)
+
+- `Zharp.Maui`: `builder.UseZharp()` on Android, iOS, Mac Catalyst and Windows.
+- `Zharp.Windows`: `ZharpApp.Start()` for WPF and Windows Forms, on .NET 8+ and .NET Framework 4.6.2+.
+- Apps: crashes written to disk first and sent on the next launch; hangs (UI thread blocked 5 s);
+  pages, windows and forms as screens; sessions and a device ID; an on-disk outbox with retries.
+- Release stacks without lines: `zharp.il_frames` (method token, IL offset, MVID) for the app's
+  own frames; `Zharp.Build` uploads apps' portable PDBs and sources under each assembly's MVID,
+  as built and after ILLink.
+- `ZHARP_DEBUG` also prints OpenTelemetry's own warnings.
+
 ## 0.1.0 (servers)
 
 First release, for servers. Apps (MAUI, WPF, Windows Forms) follow in a later release.

@@ -14,7 +14,9 @@ line in `Program.cs`, the app's key and `<EmbedAllSources>`. By hand, pick your 
 | `Zharp.AspNet.WebApi` | ASP.NET Web API 2 on .NET Framework (with `Zharp.AspNet`) |
 | `Zharp.AwsLambda` | .NET on AWS Lambda |
 | `Zharp.GoogleCloudFunctions` | .NET on Google Cloud Run functions (Cloud Functions) |
-| `Zharp.Build` | uploads a source bundle for builds that don't embed their sources (optional) |
+| `Zharp.Build` | uploads a source bundle for builds that don't embed their sources (optional); for apps, the PDBs and sources that give release stacks their lines |
+| `Zharp.Maui` | .NET MAUI on Android, iOS, Mac Catalyst and Windows (.NET 10) |
+| `Zharp.Windows` | WPF and Windows Forms (.NET 8+, .NET Framework 4.6.2+) |
 
 ## ASP.NET Core
 
@@ -133,6 +135,37 @@ dotnet add package Zharp.GoogleCloudFunctions
 
 Deploy with `--set-env-vars ZHARP_KEY=zpk_…`. Invocations are spans named by the function, and
 everything is sent before the response.
+
+## Apps: .NET MAUI, WPF, Windows Forms
+
+```sh
+dotnet add package Zharp.Maui        # or Zharp.Windows
+dotnet add package Zharp.Build       # PrivateAssets="all": release stacks get their lines
+```
+
+```csharp
+// MauiProgram.cs
+builder.UseMauiApp<App>().UseZharp(o => o.Key = "zpk_…");
+
+// WPF: first in App.OnStartup; Windows Forms: first in Main
+Zharp.ZharpApp.Start(o => o.Key = "zpk_…");
+```
+
+As the Android, iOS and Flutter SDKs: crashes are written to disk and sent at once or on the next
+launch; a UI thread blocked for 5 s is reported as `ApplicationNotResponding`; pages, windows and
+forms are screens (`screen.name`, and a `screen …` span); `session.id` (a new one after 30 minutes
+in the background, or on `ClearUser`) and `device.id` are on everything; what can't be sent waits
+in a capped outbox on disk (200 batches, 8 MB, 3 days) and is retried.
+
+Apps ship without PDBs, so their frames have no lines. For each line-less frame of the app's own
+code the SDK sends the method token, IL offset and module MVID (`zharp.il_frames`); `Zharp.Build`
+uploads each Release build's portable PDBs and sources under the MVID (`portable-pdb`,
+`source-bundle`), again after ILLink for trimmed builds, and Zharp maps the offsets to lines.
+Set `<ZharpAppId>` and `ZHARP_AUTH_TOKEN` in CI; without a token it is a dry run. Apps never embed
+their sources.
+
+Not yet: native crashes (iOS signals, the Android NDK, Windows SEH), and the UI thread's stack in a
+hang report (.NET can't read another thread's stack).
 
 ## The code that ran
 
