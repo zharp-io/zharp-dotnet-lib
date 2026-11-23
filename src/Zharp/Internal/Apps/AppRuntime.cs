@@ -39,6 +39,18 @@ namespace Zharp.Internal.Apps
 
         /// <summary>Hook the platform's crash events, screens and lifecycle. Called once Zharp runs.</summary>
         public abstract void Install(AppRuntime app);
+
+        /// <summary>
+        /// The device ID when the platform already keeps one (Godot: the GDScript addon's), so both
+        /// report the same device; null to keep Zharp's own.
+        /// </summary>
+        public virtual string? DeviceId => null;
+
+        /// <summary>The session in force when another SDK in the same app owns it (Godot); null for Zharp's own.</summary>
+        public virtual string? CurrentSession => null;
+
+        /// <summary>The screen when another SDK in the same app tracks it (Godot's scene); null for Zharp's own.</summary>
+        public virtual string? CurrentScreen => null;
     }
 
     /// <summary>
@@ -89,11 +101,13 @@ namespace Zharp.Internal.Apps
             Host = host;
             string root = host.StorageDirectory;
             Outbox = new Outbox(Path.Combine(root, "outbox"));
-            DeviceId = ReadOrCreate(Path.Combine(root, "device-id"));
+            string? shared = null;
+            try { shared = host.DeviceId; } catch { }
+            DeviceId = !string.IsNullOrEmpty(shared) ? shared! : ReadOrCreate(Path.Combine(root, "device-id"));
             Session = new SessionManager(Path.Combine(root, "session"));
         }
 
-        public string? Screen => screen;
+        public string? Screen => HostScreen() ?? screen;
 
         /// <summary>Zharp runs: hook the platform, send what earlier runs left, watch the UI thread.</summary>
         internal void Started(ZharpCore core)
@@ -112,9 +126,24 @@ namespace Zharp.Internal.Apps
         /// <summary>session.id and screen.name for a span, log or error made now.</summary>
         public IEnumerable<KeyValuePair<string, object?>> Attributes()
         {
-            yield return new KeyValuePair<string, object?>("session.id", Session.Current());
-            string? s = screen;
+            string? shared = null;
+            try { shared = Host.CurrentSession; } catch { }
+            yield return new KeyValuePair<string, object?>("session.id", !string.IsNullOrEmpty(shared) ? shared : Session.Current());
+            string? s = HostScreen() ?? screen;
             if (s != null) yield return new KeyValuePair<string, object?>("screen.name", s);
+        }
+
+        string? HostScreen()
+        {
+            try
+            {
+                string? s = Host.CurrentScreen;
+                return string.IsNullOrEmpty(s) ? null : s;
+            }
+            catch
+            {
+                return null;
+            }
         }
 
         /// <summary>A screen was shown: what happens next is on it, and a <c>screen {name}</c> span marks it.</summary>

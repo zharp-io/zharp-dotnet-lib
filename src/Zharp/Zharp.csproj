@@ -32,5 +32,6 @@
     <InternalsVisibleTo Include="Zharp.GoogleCloudFunctions" />
     <InternalsVisibleTo Include="Zharp.Windows" />
     <InternalsVisibleTo Include="Zharp.Maui" />
+    <InternalsVisibleTo Include="Zharp.Godot" />
   </ItemGroup>
 </Project>
