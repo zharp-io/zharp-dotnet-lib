@@ -170,6 +170,7 @@ namespace Zharp.Internal.Apps
         {
             ZharpCore? c = core;
             if (c == null) return;
+            c.DebugLog("crash (" + mechanism + (terminating ? ", ends the app" : "") + ")");
             if (!terminating)
             {
                 // The app goes on (Windows Forms' dialog): an unhandled error, sent as usual.

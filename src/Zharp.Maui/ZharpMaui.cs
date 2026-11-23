@@ -129,10 +129,22 @@ namespace Zharp.Maui
 #elif IOS || MACCATALYST
             ObjCRuntime.Runtime.MarshalManagedException += (_, e) => app.ReportCrash(e.Exception, "ios", terminating: true);
 #elif WINDOWS
-            Microsoft.UI.Xaml.Application? winui = Microsoft.UI.Xaml.Application.Current;
-            if (winui != null) winui.UnhandledException += (_, e) => app.ReportCrash(e.Exception, "winui", terminating: !e.Handled);
+            HookWinUI(Microsoft.UI.Xaml.Application.Current);
 #endif
         }
+
+#if WINDOWS
+        bool winuiHooked;
+
+        /// <summary>WinUI unhandled exceptions; the Application may only exist once the app is launched.</summary>
+        void HookWinUI(Microsoft.UI.Xaml.Application? winui)
+        {
+            if (winui == null || winuiHooked || app == null) return;
+            winuiHooked = true;
+            AppRuntime runtime = app;
+            winui.UnhandledException += (_, e) => runtime.ReportCrash(e.Exception, "winui", terminating: !e.Handled);
+        }
+#endif
 
         /// <summary>Foreground and background, for sessions; the first time, the app's pages too.</summary>
         public void Lifecycle(ILifecycleBuilder events)
@@ -147,6 +159,8 @@ namespace Zharp.Maui
                 .DidEnterBackground(_ => Background()));
 #elif WINDOWS
             events.AddWindows(windows => windows
+                .OnLaunching((winui, _) => HookWinUI(winui))
+                .OnLaunched((winui, _) => HookWinUI(winui))
                 .OnActivated((_, args) =>
                 {
                     if (args.WindowActivationState == Microsoft.UI.Xaml.WindowActivationState.Deactivated) Background();
