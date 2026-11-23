@@ -17,6 +17,7 @@ line in `Program.cs`, the app's key and `<EmbedAllSources>`. By hand, pick your 
 | `Zharp.Build` | uploads a source bundle for builds that don't embed their sources (optional); for apps, the PDBs and sources that give release stacks their lines |
 | `Zharp.Maui` | .NET MAUI on Android, iOS, Mac Catalyst and Windows (.NET 10) |
 | `Zharp.Windows` | WPF and Windows Forms (.NET 8+, .NET Framework 4.6.2+) |
+| `Zharp.Godot` | the C# side of Godot 4.5+ .NET games, with the [Zharp Godot addon](https://github.com/zharp-io/zharp-godot) |
 
 ## ASP.NET Core
 
@@ -168,6 +169,30 @@ Not yet: native crashes (iOS signals, the Android NDK, Windows SEH), and the UI 
 hang report (.NET can't read another thread's stack). On iOS, AOT-compiled code reports no IL
 offsets: release frames get their file and method, at the method's first line rather than the
 exact one. `npm init zharp` edits C# projects; set up a Visual Basic app by hand (the same calls).
+
+## Godot (C#)
+
+Godot .NET games use the [Zharp Godot addon](https://github.com/zharp-io/zharp-godot) for script
+and engine errors, crashes, hangs and scenes, and add `Zharp.Godot` for the C# side:
+
+```sh
+dotnet add package Zharp.Godot
+```
+
+```csharp
+public partial class Main : Godot.Node
+{
+    public override void _Ready() => Zharp.Godot.ZharpGodot.Start(this);
+}
+```
+
+It reads the addon's settings (`[zharp]` in `project.godot`) and reports exceptions that end the
+game, on any thread (saved to disk first, sent at once or on the next launch), exceptions passed to
+`ZharpGodot.CaptureException`, and with logs on `ILogger` lines — all with the addon's `session.id`,
+`device.id`, scene (`screen.name`) and player. `ZharpGodot.SetUser` / `ClearUser` set both sides.
+The addon watches the main thread for hangs, so the package doesn't. Godot loads a game into its own
+load context, where the runtime's `HttpClient` diagnostics don't reach the SDK: trace requests with
+`new HttpClient(ZharpGodot.HttpHandler())`.
 
 ## The code that ran
 

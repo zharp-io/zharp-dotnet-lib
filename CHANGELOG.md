@@ -2,6 +2,10 @@
 
 ## 0.2.0 (apps)
 
+- `Zharp.Godot`: `ZharpGodot.Start(this)` for Godot 4.5+ .NET games, joined to the Zharp Godot
+  addon's session, device, scene and player; `ZharpGodot.HttpHandler()` traces HttpClient (Godot's
+  load context hides the runtime's own HttpClient diagnostics). An app host can now supply the
+  device ID, session and screen another SDK in the same app owns.
 - `Zharp.Maui`: `builder.UseZharp()` on Android, iOS, Mac Catalyst and Windows.
 - `Zharp.Windows`: `ZharpApp.Start()` for WPF and Windows Forms, on .NET 8+ and .NET Framework 4.6.2+.
 - Apps: crashes written to disk first and sent on the next launch; hangs (UI thread blocked 5 s);
