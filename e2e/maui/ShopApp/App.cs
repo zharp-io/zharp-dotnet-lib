@@ -64,7 +64,7 @@ public class MainPage : ContentPage
             case "crash":
                 // On the UI thread, nothing handles it: an async void handler's continuation (Windows),
                 // and a callback from the platform's own loop (Android, iOS, Mac Catalyst).
-                if (DeviceInfo.Platform == DevicePlatform.WinUI) CrashLater();
+                if (Microsoft.Maui.Devices.DeviceInfo.Platform == Microsoft.Maui.Devices.DevicePlatform.WinUI) CrashLater();
                 else Dispatcher.Dispatch(() => Checkout.Pay(Array.Empty<int>()));
                 break;
             case "hang":
