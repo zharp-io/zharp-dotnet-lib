@@ -1,0 +1,71 @@
+name: MAUI Windows end to end
+
+# The MAUI sample (e2e/maui/ShopApp) in Release as an unpackaged WinUI app, Zharp.Build uploading
+# its PDBs to a stand-in Zharp, run without its PDB (as apps ship) through: a caught error, a crash
+# on the UI thread while offline (sent on the next launch), and a hang.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, feat/apps]
+    paths: ['src/**', 'e2e/maui/**', 'e2e/mock_zharp.py', '.github/workflows/maui-windows-e2e.yml']
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Build with the .NET 10 SDK (MAUI 10), not a newer one on the runner
+        shell: pwsh
+        run: |
+          '{"sdk":{"version":"10.0.100","rollForward":"latestFeature"}}' | Set-Content global.json -Encoding ascii
+          dotnet --version
+
+      - name: MAUI for Windows
+        run: dotnet workload install maui-windows
+
+      - name: Pack Zharp, Zharp.Build and Zharp.Maui (Windows)
+        run: |
+          dotnet pack src/Zharp/Zharp.csproj -c Release -o artifacts/packages
+          dotnet pack src/Zharp.Build/Zharp.Build.csproj -c Release -o artifacts/packages
+          dotnet pack src/Zharp.Maui/Zharp.Maui.csproj -c Release -o artifacts/packages -p:ZharpMauiTargets=net10.0-windows10.0.19041.0
+
+      - name: Build the app in Release (Zharp.Build uploads to the stand-in)
+        shell: pwsh
+        env:
+          ZHARP_AUTH_TOKEN: zat_maui_e2e
+          ZHARP_APP_ID: "9"
+          ZHARP_URL: http://127.0.0.1:4318
+        run: |
+          $out = "$env:RUNNER_TEMP/build"
+          $mock = Start-Process python -ArgumentList "e2e/mock_zharp.py", $out -PassThru
+          Start-Sleep 2
+          dotnet build e2e/maui/ShopApp -c Release -f net10.0-windows10.0.19041.0 -p:ShopTargets=net10.0-windows10.0.19041.0 -p:RuntimeIdentifier=win-x64
+          $code = $LASTEXITCODE
+          Stop-Process -Id $mock.Id
+          if ($code -ne 0) { throw "build failed" }
+          Get-ChildItem "$out/artifacts" -Name
+          if (-not (Get-ChildItem "$out/artifacts" -Filter "portable-pdb-*-ShopApp.pdb")) { throw "no portable PDB uploaded" }
+          $exe = Get-ChildItem e2e/maui/ShopApp/bin/Release -Recurse -Filter ShopApp.exe | Select-Object -First 1
+          "exe: $($exe.FullName)"
+          "SHOP_EXE=$($exe.FullName)" | Out-File -Append $env:GITHUB_ENV
+          # Apps ship without their PDBs: the runtime finds no lines.
+          Get-ChildItem $exe.DirectoryName -Filter ShopApp.pdb | Remove-Item -Force
+
+      - name: Run
+        shell: pwsh
+        run: ./e2e/maui/windows.ps1 -Exe $env:SHOP_EXE -Out "$env:RUNNER_TEMP/maui-windows" -Build "$env:RUNNER_TEMP/build"
+
+      - name: Keep what was sent
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: maui-windows-sent
+          path: |
+            ${{ runner.temp }}/build
+            ${{ runner.temp }}/maui-windows*

@@ -22,6 +22,9 @@
     <TargetPlatformMinVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</TargetPlatformMinVersion>
     <AndroidPackageFormat>apk</AndroidPackageFormat>
     <WindowsPackageType>None</WindowsPackageType>
+    <!-- Windows: an unpackaged exe that runs without the Windows App SDK runtime installed. -->
+    <WindowsAppSDKSelfContained Condition="$([MSBuild]::GetTargetPlatformIdentifier(&apos;$(TargetFramework)&apos;)) == &apos;windows&apos;">true</WindowsAppSDKSelfContained>
+    <SelfContained Condition="$([MSBuild]::GetTargetPlatformIdentifier(&apos;$(TargetFramework)&apos;)) == &apos;windows&apos;">true</SelfContained>
     <!-- CI: no signing identity; the simulator and an ad-hoc signed Mac Catalyst app need none. -->
     <EnableCodeSigning Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">false</EnableCodeSigning>
   </PropertyGroup>
