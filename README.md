@@ -165,7 +165,9 @@ Set `<ZharpAppId>` and `ZHARP_AUTH_TOKEN` in CI; without a token it is a dry run
 their sources.
 
 Not yet: native crashes (iOS signals, the Android NDK, Windows SEH), and the UI thread's stack in a
-hang report (.NET can't read another thread's stack).
+hang report (.NET can't read another thread's stack). On iOS, AOT-compiled code reports no IL
+offsets: release frames get their file and method, at the method's first line rather than the
+exact one. `npm init zharp` edits C# projects; set up a Visual Basic app by hand (the same calls).
 
 ## The code that ran
 

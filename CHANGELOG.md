@@ -11,6 +11,11 @@
   as built and after ILLink.
 - `ZHARP_DEBUG` also prints OpenTelemetry's own warnings.
 
+Known limits: on iOS (AOT-compiled) the runtime reports no IL offsets, so release frames get their
+file and method but the method's first line, not the exact line. Native crashes (iOS signals, the
+Android NDK, Windows SEH) aren't captured, and a hang report has no UI-thread stack. `npm init
+zharp` sets up C# projects; Visual Basic apps are set up by hand.
+
 ## 0.1.0 (servers)
 
 First release, for servers. Apps (MAUI, WPF, Windows Forms) follow in a later release.
