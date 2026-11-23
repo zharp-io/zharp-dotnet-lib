@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <!-- Godot 4.5+ .NET projects run on .NET 8. -->
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>Zharp.Godot</RootNamespace>
+    <PackageId>Zharp.Godot</PackageId>
+    <PackageTags>$(PackageTags);godot;gamedev;games;crash-reporting</PackageTags>
+    <Description>Zharp for Godot .NET (C#) games, with the Zharp Godot addon: ZharpGodot.Start(this) reports C# exceptions that end the game (saved to disk and sent on the next launch), HttpClient calls and, with logs on, ILogger lines, on the same session, device, scene and player as the addon's GDScript errors.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- The oldest Godot it works with: games bring their own GodotSharp through Godot.NET.Sdk. -->
+    <PackageReference Include="GodotSharp" PrivateAssets="All" />
+    <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="All" />
+    <ProjectReference Include="..\Zharp\Zharp.csproj" />
+  </ItemGroup>
+</Project>
