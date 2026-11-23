@@ -46,6 +46,12 @@ public class MainPage : ContentPage
         Dispatcher.DispatchDelayed(TimeSpan.FromSeconds(2), () => Run(Mode.Current));
     }
 
+    async void CrashLater()
+    {
+        await Task.Delay(10);
+        Checkout.Pay(Array.Empty<int>());
+    }
+
     void Run(string mode)
     {
         Console.WriteLine("[e2e] mode " + mode);
@@ -56,8 +62,10 @@ public class MainPage : ContentPage
                 catch (Exception error) { Zharp.ZharpSdk.CaptureException(error); }
                 break;
             case "crash":
-                // On the UI thread, from the platform's own loop: nothing handles it.
-                Dispatcher.Dispatch(() => Checkout.Pay(Array.Empty<int>()));
+                // On the UI thread, nothing handles it: an async void handler's continuation (Windows),
+                // and a callback from the platform's own loop (Android, iOS, Mac Catalyst).
+                if (DeviceInfo.Platform == DevicePlatform.WinUI) CrashLater();
+                else Dispatcher.Dispatch(() => Checkout.Pay(Array.Empty<int>()));
                 break;
             case "hang":
                 Thread.Sleep(5000);

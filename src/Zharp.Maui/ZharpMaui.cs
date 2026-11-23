@@ -143,6 +143,51 @@ namespace Zharp.Maui
             winuiHooked = true;
             AppRuntime runtime = app;
             winui.UnhandledException += (_, e) => runtime.ReportCrash(e.Exception, "winui", terminating: !e.Handled);
+            WatchUiContext();
+        }
+
+        /// <summary>
+        /// WinUI ends the app on an exception in a DispatcherQueue callback (an async void handler's,
+        /// an await's continuation) without raising UnhandledException: the UI thread's
+        /// SynchronizationContext is wrapped so such an exception is reported first, then goes on as before.
+        /// </summary>
+        void WatchUiContext()
+        {
+            if (app == null) return;
+            System.Threading.SynchronizationContext? current = System.Threading.SynchronizationContext.Current;
+            if (current == null || current is ReportingContext) return;
+            System.Threading.SynchronizationContext.SetSynchronizationContext(new ReportingContext(current, app));
+        }
+
+        sealed class ReportingContext : System.Threading.SynchronizationContext
+        {
+            readonly System.Threading.SynchronizationContext inner;
+            readonly AppRuntime app;
+
+            public ReportingContext(System.Threading.SynchronizationContext inner, AppRuntime app)
+            {
+                this.inner = inner;
+                this.app = app;
+            }
+
+            public override void Post(System.Threading.SendOrPostCallback d, object? state) => inner.Post(s => Run(d, s), state);
+
+            public override void Send(System.Threading.SendOrPostCallback d, object? state) => inner.Send(s => Run(d, s), state);
+
+            public override System.Threading.SynchronizationContext CreateCopy() => new ReportingContext(inner.CreateCopy(), app);
+
+            void Run(System.Threading.SendOrPostCallback d, object? state)
+            {
+                try
+                {
+                    d(state);
+                }
+                catch (Exception error)
+                {
+                    app.ReportCrash(error, "winui", terminating: true);
+                    throw;
+                }
+            }
         }
 #endif
 
@@ -171,6 +216,9 @@ namespace Zharp.Maui
 
         void Foreground()
         {
+#if WINDOWS
+            WatchUiContext();
+#endif
             HookPages();
             app?.OnForeground();
         }
