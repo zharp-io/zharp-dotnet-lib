@@ -1,0 +1,23 @@
+; The Zharp.Godot e2e game: e2e/godot/run.sh copies the Zharp Godot addon into addons/zharp.
+config_version=5
+
+[application]
+config/name="Shop Quest CS"
+config/version="2.0.1"
+run/main_scene="res://main.tscn"
+config/features=PackedStringArray("4.5", "C#")
+
+[autoload]
+Zharp="*res://addons/zharp/zharp.gd"
+
+[debug]
+settings/gdscript/always_track_call_stacks=true
+file_logging/enable_file_logging=true
+
+[dotnet]
+project/assembly_name="ShopQuest"
+
+[zharp]
+key="zpk_e2e_test"
+endpoint="http://127.0.0.1:4318"
+environment="e2e"

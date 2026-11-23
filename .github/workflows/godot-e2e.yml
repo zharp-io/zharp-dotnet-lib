@@ -1,0 +1,36 @@
+name: Godot e2e
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Zharp.Godot in a Godot 4.5 .NET game, headless, with the Zharp Godot addon (zharp-io/zharp-godot)
+# and its Docker image: e2e/godot/run.sh.
+jobs:
+  godot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: zharp-io/zharp-godot
+          path: zharp-godot
+      - name: Pack Zharp and Zharp.Godot
+        run: |
+          docker run --rm -v "$PWD:/src" -w /src mcr.microsoft.com/dotnet/sdk:11.0 \
+            dotnet pack src/Zharp/Zharp.csproj -c Release -o artifacts/godot-e2e
+          docker run --rm -v "$PWD:/src" -w /src mcr.microsoft.com/dotnet/sdk:10.0 \
+            dotnet pack src/Zharp.Godot/Zharp.Godot.csproj -c Release -o artifacts/godot-e2e
+      - name: The Godot test image
+        run: docker build -t zharp-godot-test:4.5.1 zharp-godot/e2e/docker
+      - name: Run
+        run: |
+          mkdir -p results
+          docker run --rm -v "$PWD:/src:ro" -v "$PWD/zharp-godot:/godot:ro" -v "$PWD/results:/results" \
+            zharp-godot-test:4.5.1 bash /src/e2e/godot/run.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: godot-e2e
+          path: results
