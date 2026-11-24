@@ -4,6 +4,9 @@ name: Pack
 # .nupkg/.snupkg files as an artifact. Run by hand; publishing to NuGet is done separately.
 on:
   workflow_dispatch:
+  # Temporary: workflow_dispatch only works once the file is on main.
+  push:
+    branches: [release/0.2.0]
 
 jobs:
   pack:
