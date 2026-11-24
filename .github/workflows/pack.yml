@@ -1,0 +1,55 @@
+name: Pack
+
+# Packs every Zharp package (Release, deterministic CI build) into one folder and uploads the
+# .nupkg/.snupkg files as an artifact. Run by hand; publishing to NuGet is done separately.
+on:
+  workflow_dispatch:
+
+jobs:
+  pack:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Build with the .NET 10 SDK (MAUI 10), not a newer one on the runner
+        shell: pwsh
+        run: |
+          '{"sdk":{"version":"10.0.100","rollForward":"latestFeature"}}' | Set-Content global.json -Encoding ascii
+          dotnet --version
+
+      - name: MAUI workload
+        run: dotnet workload install maui
+
+      - name: Pack
+        shell: pwsh
+        run: |
+          $projects = @(
+            "src/Zharp/Zharp.csproj",
+            "src/Zharp.AspNetCore/Zharp.AspNetCore.csproj",
+            "src/Zharp.AspNet/Zharp.AspNet.csproj",
+            "src/Zharp.AspNet.WebApi/Zharp.AspNet.WebApi.csproj",
+            "src/Zharp.AwsLambda/Zharp.AwsLambda.csproj",
+            "src/Zharp.GoogleCloudFunctions/Zharp.GoogleCloudFunctions.csproj",
+            "src/Zharp.Build/Zharp.Build.csproj",
+            "src/Zharp.Windows/Zharp.Windows.csproj",
+            "src/Zharp.Maui/Zharp.Maui.csproj",
+            "src/Zharp.Godot/Zharp.Godot.csproj"
+          )
+          foreach ($p in $projects) {
+            dotnet pack $p -c Release -o artifacts/packages -p:ContinuousIntegrationBuild=true -p:Deterministic=true
+            if ($LASTEXITCODE -ne 0) { throw "pack failed: $p" }
+          }
+          Get-ChildItem artifacts/packages -Name
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: packages
+          path: |
+            artifacts/packages/*.nupkg
+            artifacts/packages/*.snupkg
+          if-no-files-found: error
